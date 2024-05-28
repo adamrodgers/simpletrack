@@ -8,6 +8,9 @@ const nextConfig = {
     MONGODB_URI: process.env.MONGODB_URI || "",
     MONGODB_DB: process.env.MONGODB_DB || "",
   },
+  images: {
+    domains: ["lh3.googleusercontent.com"], // Add the domain of your image source here
+  },
 };
 
 export default nextConfig;
