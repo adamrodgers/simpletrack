@@ -9,7 +9,7 @@ const nextConfig = {
     MONGODB_DB: process.env.MONGODB_DB || "",
   },
   images: {
-    domains: ["lh3.googleusercontent.com"], // Add the domain of your image source here
+    domains: ["lh3.googleusercontent.com"],
   },
 };
 
