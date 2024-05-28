@@ -19,15 +19,15 @@ export default function Signin() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    async function fetchContacts() {
-      setLoading(true);
-      const res = await fetch("/api/contacts");
-      const data = await res.json();
-      setContacts(data);
-      setLoading(false);
-    }
+  const fetchContacts = async () => {
+    setLoading(true);
+    const res = await fetch("/api/contacts");
+    const data = await res.json();
+    setContacts(data);
+    setLoading(false);
+  };
 
+  useEffect(() => {
     fetchContacts();
   }, []);
 
@@ -38,7 +38,7 @@ export default function Signin() {
       });
 
       if (response.ok) {
-        setContacts(contacts.filter((contact) => contact._id !== id));
+        fetchContacts(); // Refetch contacts after deletion
       } else {
         const errorData = await response.json();
         alert(`Failed to delete contact: ${errorData.message}`);
