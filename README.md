@@ -37,7 +37,6 @@ Sarah's CRM is a custom Customer Relationship Management system designed for tra
 
 ![Screenshot 3](https://github.com/adamrodgrs/sarahcrm/assets/80862221/bc578fe2-461b-482e-8b01-4878fd80be0a)
 
-
 ## Getting Started
 
 ### Prerequisites
@@ -88,10 +87,6 @@ Sarah's CRM is a custom Customer Relationship Management system designed for tra
 - **Add Lead**: Add new leads with detailed information.
 - **Edit Lead**: Update existing lead information.
 - **Delete Lead**: Remove leads that are no longer relevant.
-
-## Contributing
-
-Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTING.md) first.
 
 ## License
 
