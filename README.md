@@ -1,12 +1,12 @@
 # Sarah's CRM
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![React](https://img.shields.io/badge/React-v18.0.0-blue)
-![NextJS](https://img.shields.io/badge/NextJS-v12.0.0-blue)
-![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v3.0.0-blue)
-![HeroIcons](https://img.shields.io/badge/HeroIcons-v2.0.0-blue)
-![NextAuth](https://img.shields.io/badge/NextAuth-v4.0.0-blue)
-![MongoDB](https://img.shields.io/badge/MongoDB-v4.4.0-blue)
+![React](https://img.shields.io/badge/React-v18.2.0-blue)
+![NextJS](https://img.shields.io/badge/NextJS-v14.2.3-blue)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v3.4.3-blue)
+![HeroIcons](https://img.shields.io/badge/HeroIcons-v2.1.3-blue)
+![NextAuth](https://img.shields.io/badge/NextAuth-v4.24.7-blue)
+![MongoDB](https://img.shields.io/badge/MongoDB-v6.6.2-blue)
 ![Node.js](https://img.shields.io/badge/Node.js-v16.0.0-blue)
 
 Sarah's CRM is a custom Customer Relationship Management system designed for tracking potential insurance leads. This application is built using modern web technologies such as React, NextJS, Tailwind CSS, NextAuth for authentication, HeroIcons for icons, MongoDB for the database, and Node.js for the server.
