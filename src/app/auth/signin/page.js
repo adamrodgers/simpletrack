@@ -13,7 +13,18 @@ import InsuranceNeeds from "../../../components/InsuranceNeeds";
 
 const ITEMS_PER_PAGE = 8;
 
-const fetcher = (url) => fetch(url).then((res) => res.json());
+const fetcher = async (url) => {
+  const res = await fetch(url, {
+    headers: {
+      "Cache-Control": "no-cache",
+    },
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message);
+  }
+  return res.json();
+};
 
 export default function Signin() {
   const { data: session, status } = useSession();
@@ -46,6 +57,10 @@ export default function Signin() {
 
   if (status === "loading" || !contacts) {
     return <p>Loading...</p>;
+  }
+
+  if (error) {
+    return <p>Error loading contacts: {error.message}</p>;
   }
 
   if (!session || !session.user.email) {
