@@ -31,7 +31,7 @@ export default function Home() {
             >
               <div className="flex items-center h-full px-20 bg-gray-900 bg-opacity-40">
                 <div>
-                  <h2 className="text-4xl font-bold text-white">Sarah's CRM</h2>
+                  <h2 className="text-4xl font-bold text-white">Sarah&apos;s CRM</h2>
                   <p className="max-w-xl mt-3 text-gray-300">Custom CRM for Sarah to keep track of potential leads and clients.</p>
                 </div>
               </div>

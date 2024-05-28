@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -31,7 +32,7 @@ export default function NavBar() {
       {session && (
         <nav className="z-20 flex flex-col justify-around gap-4 border-t border-gray-200 bg-white/50 p-2.5 shadow-lg backdrop-blur-lg dark:border-slate-600/60 dark:bg-slate-800/50 min-h-[auto] rounded-lg border">
           <div className="flex aspect-square min-h-[32px] w-16 flex-col items-center justify-center gap-1 rounded-md p-1.5 bg-indigo-50 text-indigo-600 dark:bg-sky-900 dark:text-sky-50">
-            <img src={session.user.image} alt={session.user.name} className="w-6 h-6 mx-auto rounded-full mb-2" />
+            <Image src={session.user.image} alt={session.user.name} width={24} height={24} className="w-6 h-6 mx-auto rounded-full mb-2" />
             <small className="text-center text-xs font-medium">{session.user.name.split(" ")[0]}</small>
           </div>
           <Link
