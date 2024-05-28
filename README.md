@@ -31,8 +31,12 @@ Sarah's CRM is a custom Customer Relationship Management system designed for tra
 
 ## Screenshots
 
-![Screenshot 1](https://via.placeholder.com/800x400.png?text=Screenshot+1)
-![Screenshot 2](https://via.placeholder.com/800x400.png?text=Screenshot+2)
+![Screenshot 1](https://github.com/adamrodgrs/sarahcrm/assets/80862221/0e27f32b-b81c-4d3e-871e-17bffb4a3cab)
+
+![Screenshot 2](https://github.com/adamrodgrs/sarahcrm/assets/80862221/49de24f9-959e-435b-831b-6ce4f278a4bd)
+
+![Screenshot 3](https://github.com/adamrodgrs/sarahcrm/assets/80862221/bc578fe2-461b-482e-8b01-4878fd80be0a)
+
 
 ## Getting Started
 
