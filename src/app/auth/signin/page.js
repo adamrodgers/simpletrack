@@ -1,9 +1,10 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PencilIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import useSWR from "swr";
 
 import ContactStatus from "../../../components/ContactStatus";
 import PreferredContactMethod from "../../../components/PreferredContactMethod";
@@ -12,24 +13,14 @@ import InsuranceNeeds from "../../../components/InsuranceNeeds";
 
 const ITEMS_PER_PAGE = 8;
 
+const fetcher = (url) => fetch(url).then((res) => res.json());
+
 export default function Signin() {
   const { data: session, status } = useSession();
   const [currentPage, setCurrentPage] = useState(1);
-  const [contacts, setContacts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const fetchContacts = async () => {
-    setLoading(true);
-    const res = await fetch("/api/contacts");
-    const data = await res.json();
-    setContacts(data);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchContacts();
-  }, []);
+  const { data: contacts, error, mutate } = useSWR("/api/contacts", fetcher);
 
   const deleteContact = async (id) => {
     try {
@@ -38,7 +29,7 @@ export default function Signin() {
       });
 
       if (response.ok) {
-        fetchContacts(); // Refetch contacts after deletion
+        mutate(); // Revalidate the SWR cache
       } else {
         const errorData = await response.json();
         alert(`Failed to delete contact: ${errorData.message}`);
@@ -53,7 +44,7 @@ export default function Signin() {
     router.push(`/auth/editlead?id=${id}`);
   };
 
-  if (status === "loading" || loading) {
+  if (status === "loading" || !contacts) {
     return <p>Loading...</p>;
   }
 
