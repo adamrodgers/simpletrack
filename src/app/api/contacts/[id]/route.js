@@ -2,11 +2,15 @@ import { connectToDatabase } from "../../../../utils/mongodb";
 import { ObjectId } from "mongodb";
 
 export async function GET(request, { params }) {
+  console.log("GET request received at /api/contacts/[id]");
+  const start = Date.now();
+
   try {
     const { db } = await connectToDatabase();
     const { id } = params;
 
     if (!ObjectId.isValid(id)) {
+      console.error("Invalid ID format");
       return new Response(JSON.stringify({ message: "Invalid ID format" }), {
         status: 400,
         headers: {
@@ -17,6 +21,9 @@ export async function GET(request, { params }) {
 
     const contact = await db.collection("contacts").findOne({ _id: new ObjectId(id) });
 
+    const duration = Date.now() - start;
+    console.log(`Query completed in ${duration}ms`);
+
     if (contact) {
       return new Response(JSON.stringify(contact), {
         status: 200,
@@ -25,6 +32,7 @@ export async function GET(request, { params }) {
         },
       });
     } else {
+      console.error("Contact not found");
       return new Response(JSON.stringify({ message: "Contact not found" }), {
         status: 404,
         headers: {
@@ -50,6 +58,7 @@ export async function PUT(request, { params }) {
     const data = await request.json();
 
     if (!ObjectId.isValid(id)) {
+      console.error("Invalid ID format");
       return new Response(JSON.stringify({ message: "Invalid ID format" }), {
         status: 400,
         headers: {
@@ -70,6 +79,7 @@ export async function PUT(request, { params }) {
         },
       });
     } else {
+      console.error("Contact not found");
       return new Response(JSON.stringify({ message: "Contact not found" }), {
         status: 404,
         headers: {
@@ -94,6 +104,7 @@ export async function DELETE(request, { params }) {
     const { id } = params;
 
     if (!ObjectId.isValid(id)) {
+      console.error("Invalid ID format");
       return new Response(JSON.stringify({ message: "Invalid ID format" }), {
         status: 400,
         headers: {
@@ -112,6 +123,7 @@ export async function DELETE(request, { params }) {
         },
       });
     } else {
+      console.error("Contact not found");
       return new Response(JSON.stringify({ message: "Contact not found" }), {
         status: 404,
         headers: {
