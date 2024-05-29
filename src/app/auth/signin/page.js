@@ -3,35 +3,23 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PencilIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import useSWR from "swr";
 
-import ContactStatus from "../../../components/ContactStatus";
-import PreferredContactMethod from "../../../components/PreferredContactMethod";
-import StateAbbreviation from "../../../components/StateAbbreviation";
-import InsuranceNeeds from "../../../components/InsuranceNeeds";
+import SearchBar from "../../../components/SearchBar";
+import Pagination from "../../../components/Pagination";
+import ContactsTable from "../../../components/ContactsTable";
+import { useContacts } from "../../../hooks/useContacts";
 
-const ITEMS_PER_PAGE = 8;
-
-const fetcher = async (url) => {
-  const res = await fetch(url, {
-    headers: {
-      "Cache-Control": "no-cache",
-    },
-  });
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message);
-  }
-  return res.json();
-};
+const ITEMS_PER_PAGE = 7;
 
 export default function Signin() {
   const { data: session, status } = useSession();
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc"); // Sorting order state
   const router = useRouter();
 
-  const { data: contacts, error, mutate } = useSWR("/api/contacts", fetcher);
+  const { contacts, error, revalidate } = useContacts();
 
   const deleteContact = async (id) => {
     try {
@@ -40,7 +28,7 @@ export default function Signin() {
       });
 
       if (response.ok) {
-        mutate();
+        revalidate();
       } else {
         const errorData = await response.json();
         alert(`Failed to delete contact: ${errorData.message}`);
@@ -55,13 +43,28 @@ export default function Signin() {
     router.push(`/auth/editlead?id=${id}`);
   };
 
-  const revalidateContacts = async () => {
-    await mutate();
+  useEffect(() => {
+    revalidate();
+  }, []);
+
+  const handleSearch = (term) => {
+    setSearchTerm(term);
   };
 
-  useEffect(() => {
-    revalidateContacts();
-  }, []);
+  const handleSort = () => {
+    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+  };
+
+  const sortedContacts = contacts?.sort((a, b) => {
+    const nameA = a.name.split(" ").pop().toLowerCase();
+    const nameB = b.name.split(" ").pop().toLowerCase();
+    if (sortOrder === "asc") {
+      return nameA.localeCompare(nameB);
+    }
+    return nameB.localeCompare(nameA);
+  });
+
+  const filteredContacts = sortedContacts?.filter((contact) => contact.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   if (status === "loading" || !contacts) {
     return <p>Loading...</p>;
@@ -75,8 +78,8 @@ export default function Signin() {
     return null;
   }
 
-  const totalPages = Math.ceil(contacts.length / ITEMS_PER_PAGE);
-  const paginatedContacts = contacts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredContacts.length / ITEMS_PER_PAGE);
+  const paginatedContacts = filteredContacts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -84,93 +87,24 @@ export default function Signin() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <div className="overflow-hidden rounded-lg border border-gray-200 shadow-md m-5 w-full">
-        <table className="w-full border-collapse bg-white text-left text-sm text-gray-500">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-4 font-medium text-gray-900">
-                Name
-              </th>
-              <th scope="col" className="px-6 py-4 font-medium text-gray-900">
-                Contact
-              </th>
-              <th scope="col" className="px-6 py-4 font-medium text-gray-900">
-                Status
-              </th>
-              <th scope="col" className="px-6 py-4 font-medium text-gray-900">
-                Current Insurance
-              </th>
-              <th scope="col" className="px-6 py-4 font-medium text-gray-900">
-                State
-              </th>
-              <th scope="col" className="px-6 py-4 font-medium text-gray-900">
-                Insurance Needs
-              </th>
-              <th scope="col" className="px-6 py-4 font-medium text-gray-900"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 border-t border-gray-100">
-            {paginatedContacts.map((contact, index) => (
-              <tr key={index} className="hover:bg-gray-50">
-                <th className="flex gap-3 px-6 py-4 font-normal text-gray-900">
-                  <div className="text-sm">
-                    <div className="font-medium text-gray-700">{contact.name}</div>
-                    <div className="text-gray-400">{contact.occupation}</div>
-                  </div>
-                </th>
-                <PreferredContactMethod methods={contact.preferredContact} phone={contact.phone} email={contact.email} />
-                <ContactStatus level={contact.status} statusDate={contact.statusDate} />
-                <td className="px-6 py-4">{contact.currentInsCo}</td>
-                <StateAbbreviation state={contact.state} />
-                <InsuranceNeeds needs={contact.needs} />
-                <td className="px-6 py-4">
-                  <div className="flex justify-end gap-4">
-                    <button onClick={() => deleteContact(contact._id)}>
-                      <TrashIcon className="h-6 w-6 text-gray-600 hover:text-red-600" />
-                    </button>
-                    <button onClick={() => editContact(contact._id)}>
-                      <PencilIcon className="h-6 w-6 text-gray-600 hover:text-blue-600" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="flex justify-center">
-          <div className="inline-flex border border-[#e4e4e4] bg-white p-4 rounded-xl mt-4">
-            <ul className="flex items-center justify-center w-full">
-              <li className="px-[6px]">
-                <button
-                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                  className="w-9 h-9 flex items-center justify-center rounded-md border border-[#EDEFF1] text-[#838995] text-base hover:bg-primary hover:border-primary hover:text-blue"
-                >
-                  <ChevronLeftIcon className="h-5 w-5" />
-                </button>
-              </li>
-              {Array.from({ length: totalPages }, (_, index) => (
-                <li className="px-[6px]" key={index}>
-                  <button
-                    onClick={() => handlePageChange(index + 1)}
-                    className={`w-9 h-9 flex items-center justify-center rounded-md border border-[#EDEFF1] text-[#838995] text-base hover:bg-primary hover:border-primary hover:text-blue ${
-                      currentPage === index + 1 ? "text-gray-900 font-bold" : ""
-                    }`}
-                  >
-                    {index + 1}
-                  </button>
-                </li>
-              ))}
-              <li className="px-[6px]">
-                <button
-                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                  className="w-9 h-9 flex items-center justify-center rounded-md border border-[#EDEFF1] text-[#838995] text-base hover:bg-primary hover:border-primary hover:text-blue"
-                >
-                  <ChevronRightIcon className="h-5 w-5" />
-                </button>
-              </li>
-            </ul>
+      <SearchBar searchTerm={searchTerm} onSearch={handleSearch} />
+      <div className="overflow-hidden rounded-lg border border-gray-200 shadow-md w-full">
+        {paginatedContacts.length > 0 ? (
+          <ContactsTable contacts={paginatedContacts} onDelete={deleteContact} onEdit={editContact} onSort={handleSort} />
+        ) : (
+          <div className="flex items-center justify-center p-4">
+            <div className="flex flex-col items-center">
+              <div className="p-3 mx-auto text-gray-200 bg-blue-100 rounded-full dark:bg-sky-900">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              </div>
+              <h1 className="mt-3 text-lg text-gray-800 dark:text-gray-800">No contacts found</h1>
+              <p className="mt-2 text-gray-500 dark:text-gray-500">Your search did not match any contacts. Please try again or create a new contact.</p>
+            </div>
           </div>
-        </div>
+        )}
+        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
       </div>
     </div>
   );
