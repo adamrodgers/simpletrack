@@ -40,7 +40,7 @@ export default function Signin() {
       });
 
       if (response.ok) {
-        mutate(); // Revalidate the SWR cache
+        mutate();
       } else {
         const errorData = await response.json();
         alert(`Failed to delete contact: ${errorData.message}`);
