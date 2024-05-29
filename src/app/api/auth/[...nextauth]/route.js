@@ -10,8 +10,7 @@ const authOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile, email, credentials }) {
-      const allowedEmails = process.env.ALLOWED_EMAILS.split(",");
-      return allowedEmails.includes(user.email);
+      return true;
     },
     async redirect({ url, baseUrl }) {
       if (url.startsWith(baseUrl)) return url;
