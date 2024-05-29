@@ -118,11 +118,7 @@ export default function Signin() {
                     <div className="text-gray-400">{contact.occupation}</div>
                   </div>
                 </th>
-                <td className="px-6 py-4">
-                  <div className="text-gray-400">{contact.phone}</div>
-                  <div className="text-gray-400">{contact.email}</div>
-                  <PreferredContactMethod methods={contact.preferredContact} />
-                </td>
+                <PreferredContactMethod methods={contact.preferredContact} />
                 <ContactStatus level={contact.status} statusDate={contact.statusDate} />
                 <td className="px-6 py-4">{contact.currentInsCo}</td>
                 <StateAbbreviation state={contact.state} />
