@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import useSWR from "swr";
 
 export default function EditLead() {
   const router = useRouter();
@@ -22,29 +21,73 @@ export default function EditLead() {
     preferredContact: [],
   });
 
-  const { mutate } = useSWR("/api/contacts");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      fetchContact();
-    }
-  }, [id]);
+    setMounted(true);
+  }, []);
 
-  const fetchContact = async () => {
-    try {
-      const res = await fetch(`/api/contacts/${id}`);
-      const data = await res.json();
-      setFormData(data);
-    } catch (error) {
-      console.error("Error fetching contact:", error);
+  useEffect(() => {
+    async function fetchContact() {
+      if (id) {
+        try {
+          const res = await fetch(`/api/contacts/${id}`);
+          if (!res.ok) {
+            throw new Error("Failed to fetch contact data");
+          }
+          const data = await res.json();
+          setFormData(data);
+        } catch (error) {
+          console.error("Error fetching contact:", error);
+        }
+      }
     }
-  };
+
+    fetchContact();
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const handleNeedsChange = (e) => {
+    const { value, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      needs: checked ? [...prev.needs, value] : prev.needs.filter((need) => need !== value),
+    }));
+  };
+
+  const handlePreferredContactChange = (e) => {
+    const { value, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      preferredContact: checked ? [...prev.preferredContact, value] : prev.preferredContact.filter((method) => method !== value),
+    }));
+  };
+
+  const formatPhoneNumber = (value) => {
+    if (!value) return value;
+
+    const phoneNumber = value.replace(/[^\d]/g, "");
+    const phoneNumberLength = phoneNumber.length;
+
+    if (phoneNumberLength < 4) return phoneNumber;
+    if (phoneNumberLength < 7) {
+      return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
+    }
+    return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+  };
+
+  const handlePhoneChange = (e) => {
+    const formattedPhoneNumber = formatPhoneNumber(e.target.value);
+    setFormData((prev) => ({
+      ...prev,
+      phone: formattedPhoneNumber,
     }));
   };
 
@@ -60,7 +103,6 @@ export default function EditLead() {
       });
 
       if (response.ok) {
-        await mutate(); // Revalidate the SWR cache
         alert("Contact updated successfully!");
         router.push("/auth/signin");
       } else {
@@ -75,6 +117,10 @@ export default function EditLead() {
   const handleCancel = () => {
     router.push("/auth/signin");
   };
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
@@ -103,7 +149,7 @@ export default function EditLead() {
             </div>
             <div>
               <label className="block text-gray-700">Phone</label>
-              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-2 border rounded-md text-gray-900 focus:ring focus:ring-blue-200" required />
+              <input type="tel" name="phone" value={formData.phone} onChange={handlePhoneChange} className="w-full px-4 py-2 border rounded-md text-gray-900 focus:ring focus:ring-blue-200" required />
             </div>
             <div>
               <label className="block text-gray-700">Status</label>

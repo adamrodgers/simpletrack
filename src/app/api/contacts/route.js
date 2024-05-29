@@ -1,5 +1,7 @@
 import { connectToDatabase } from "../../../utils/mongodb";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request) {
   try {
     const { db } = await connectToDatabase();
