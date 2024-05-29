@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { connectToDatabase } from "../../../utils/mongodb";
 
 const authOptions = {
   providers: [
@@ -15,6 +16,23 @@ const authOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile, email, credentials }) {
+      const { db } = await connectToDatabase();
+      const usersCollection = db.collection("users");
+
+      const existingUser = await usersCollection.findOne({ email: user.email });
+
+      if (!existingUser) {
+        await usersCollection.insertOne({
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          createdAt: new Date(),
+          lastLoggedIn: new Date(),
+        });
+      } else {
+        await usersCollection.updateOne({ email: user.email }, { $set: { lastLoggedIn: new Date() } });
+      }
+
       return true;
     },
     async redirect({ url, baseUrl }) {
@@ -42,11 +60,10 @@ const authOptions = {
   useSecureCookies: process.env.NODE_ENV === "production",
 };
 
-// Explicitly export named handlers for each HTTP method
 export const GET = async (req, res) => {
-  return await NextAuth(req, res, authOptions);
+  return NextAuth(req, res, authOptions);
 };
 
 export const POST = async (req, res) => {
-  return await NextAuth(req, res, authOptions);
+  return NextAuth(req, res, authOptions);
 };
