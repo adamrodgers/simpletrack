@@ -6,6 +6,11 @@ const authOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          prompt: "select_account", // Force the Google account selection prompt
+        },
+      },
     }),
   ],
   callbacks: {
@@ -38,10 +43,19 @@ const authOptions = {
   useSecureCookies: process.env.NODE_ENV === "production",
 };
 
+const setNoCacheHeaders = (res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
+};
+
 export const GET = async (req, res) => {
+  setNoCacheHeaders(res);
   return NextAuth(req, res, authOptions);
 };
 
 export const POST = async (req, res) => {
+  setNoCacheHeaders(res);
   return NextAuth(req, res, authOptions);
 };
