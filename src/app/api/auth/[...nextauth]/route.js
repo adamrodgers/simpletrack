@@ -23,6 +23,7 @@ const authOptions = {
 
       if (!existingUser) {
         await usersCollection.insertOne({
+          userId: user.id,
           email: user.email,
           name: user.name,
           image: user.image,
