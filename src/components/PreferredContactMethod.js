@@ -1,12 +1,12 @@
 import { PhoneIcon, EnvelopeIcon, ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 
-const PreferredContactMethod = ({ methods }) => {
+const PreferredContactMethod = ({ methods, phone, email }) => {
   const iconClass = "h-5 w-5 text-gray-500";
 
   return (
     <td className="px-6 py-4">
-      <div className="text-gray-400">{contact.phone}</div>
-      <div className="text-gray-400">{contact.email}</div>
+      <div className="text-gray-400">{phone}</div>
+      <div className="text-gray-400">{email}</div>
       <div className="flex gap-1">
         {methods.includes("Phone") && <PhoneIcon className={iconClass} />}
         {methods.includes("Email") && <EnvelopeIcon className={iconClass} />}
