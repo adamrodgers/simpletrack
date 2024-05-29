@@ -8,7 +8,7 @@ const authOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       authorization: {
         params: {
-          prompt: "select_account", // Force the Google account selection prompt
+          prompt: "select_account",
         },
       },
     }),
@@ -44,18 +44,20 @@ const authOptions = {
 };
 
 const setNoCacheHeaders = (res) => {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Expires", "0");
-  res.setHeader("Surrogate-Control", "no-store");
+  res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.headers.set("Pragma", "no-cache");
+  res.headers.set("Expires", "0");
+  res.headers.set("Surrogate-Control", "no-store");
 };
 
 export const GET = async (req, res) => {
-  setNoCacheHeaders(res);
-  return NextAuth(req, res, authOptions);
+  const response = await NextAuth(req, res, authOptions);
+  setNoCacheHeaders(response);
+  return response;
 };
 
 export const POST = async (req, res) => {
-  setNoCacheHeaders(res);
-  return NextAuth(req, res, authOptions);
+  const response = await NextAuth(req, res, authOptions);
+  setNoCacheHeaders(response);
+  return response;
 };
