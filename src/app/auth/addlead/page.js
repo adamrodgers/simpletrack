@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function AddLead() {
+  const { data: session } = useSession();
   const router = useRouter();
 
   const [formData, setFormData] = useState({
@@ -78,7 +80,7 @@ export default function AddLead() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, userId: session.user.id }),
       });
 
       if (response.ok) {

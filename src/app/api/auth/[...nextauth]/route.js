@@ -6,11 +6,6 @@ const authOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      authorization: {
-        params: {
-          prompt: "select_account",
-        },
-      },
     }),
   ],
   callbacks: {
@@ -43,21 +38,11 @@ const authOptions = {
   useSecureCookies: process.env.NODE_ENV === "production",
 };
 
-const setNoCacheHeaders = (res) => {
-  res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  res.headers.set("Pragma", "no-cache");
-  res.headers.set("Expires", "0");
-  res.headers.set("Surrogate-Control", "no-store");
-};
-
+// Explicitly export named handlers for each HTTP method
 export const GET = async (req, res) => {
-  const response = await NextAuth(req, res, authOptions);
-  setNoCacheHeaders(response);
-  return response;
+  return await NextAuth(req, res, authOptions);
 };
 
 export const POST = async (req, res) => {
-  const response = await NextAuth(req, res, authOptions);
-  setNoCacheHeaders(response);
-  return response;
+  return await NextAuth(req, res, authOptions);
 };

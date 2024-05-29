@@ -3,7 +3,6 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import useSWR from "swr";
 
 import SearchBar from "../../../components/SearchBar";
 import Pagination from "../../../components/Pagination";
@@ -16,7 +15,7 @@ export default function Signin() {
   const { data: session, status } = useSession();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOrder, setSortOrder] = useState("asc"); // Sorting order state
+  const [sortOrder, setSortOrder] = useState("asc");
   const router = useRouter();
 
   const { contacts, error, revalidate } = useContacts();

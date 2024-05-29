@@ -1,13 +1,36 @@
 import { connectToDatabase } from "../../../utils/mongodb";
+import { getServerSession } from "next-auth/next";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request) {
+export async function GET(req) {
+  const session = await getServerSession(req);
+
+  if (!session) {
+    return new Response(JSON.stringify({ message: "Unauthorized" }), {
+      status: 401,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }
+
+  const userId = new URL(req.url).searchParams.get("userId");
+
+  if (!userId) {
+    return new Response(JSON.stringify({ message: "Missing user ID" }), {
+      status: 400,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }
+
   try {
     const { db } = await connectToDatabase();
-    const contacts = await db.collection("contacts").find({}).toArray();
+    const contacts = await db.collection("contacts").find({ userId }).toArray();
 
-    const response = new Response(JSON.stringify(contacts), {
+    return new Response(JSON.stringify(contacts), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
@@ -17,7 +40,6 @@ export async function GET(request) {
         "Surrogate-Control": "no-store",
       },
     });
-    return response;
   } catch (error) {
     return new Response(JSON.stringify({ message: "Error fetching contacts", error: error.message }), {
       status: 500,
