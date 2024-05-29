@@ -38,22 +38,10 @@ const authOptions = {
   useSecureCookies: process.env.NODE_ENV === "production",
 };
 
-const handler = (req, res) => NextAuth(req, res, authOptions);
-
-export const GET = async (req) => {
-  const response = await handler(req);
-  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  response.headers.set("Pragma", "no-cache");
-  response.headers.set("Expires", "0");
-  response.headers.set("Surrogate-Control", "no-store");
-  return response;
+export const GET = async (req, res) => {
+  return NextAuth(req, res, authOptions);
 };
 
-export const POST = async (req) => {
-  const response = await handler(req);
-  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  response.headers.set("Pragma", "no-cache");
-  response.headers.set("Expires", "0");
-  response.headers.set("Surrogate-Control", "no-store");
-  return response;
+export const POST = async (req, res) => {
+  return NextAuth(req, res, authOptions);
 };
