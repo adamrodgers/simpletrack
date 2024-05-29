@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { NextResponse } from "next/server";
 
 const authOptions = {
   providers: [
@@ -39,20 +38,22 @@ const authOptions = {
   useSecureCookies: process.env.NODE_ENV === "production",
 };
 
-export async function GET(req) {
-  const response = NextAuth(req, null, authOptions);
-  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  response.headers.set("Pragma", "no-cache");
-  response.headers.set("Expires", "0");
-  response.headers.set("Surrogate-Control", "no-store");
-  return response;
-}
+const handler = (req, res) => NextAuth(req, res, authOptions);
 
-export async function POST(req) {
-  const response = NextAuth(req, null, authOptions);
+export const GET = async (req) => {
+  const response = await handler(req);
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   response.headers.set("Pragma", "no-cache");
   response.headers.set("Expires", "0");
   response.headers.set("Surrogate-Control", "no-store");
   return response;
-}
+};
+
+export const POST = async (req) => {
+  const response = await handler(req);
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Expires", "0");
+  response.headers.set("Surrogate-Control", "no-store");
+  return response;
+};
