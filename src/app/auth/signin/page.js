@@ -55,6 +55,14 @@ export default function Signin() {
     router.push(`/auth/editlead?id=${id}`);
   };
 
+  const revalidateContacts = async () => {
+    await mutate();
+  };
+
+  useEffect(() => {
+    revalidateContacts();
+  }, []);
+
   if (status === "loading" || !contacts) {
     return <p>Loading...</p>;
   }
