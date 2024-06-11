@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import SearchBar from "../../../components/SearchBar";
 import Pagination from "../../../components/Pagination";
 import ContactsTable from "../../../components/ContactsTable";
-import Modal from "../../../components/Modal"; // Import the Modal component
+import Modal from "../../../components/Modal";
 import { useContacts } from "../../../hooks/useContacts";
 
 const ITEMS_PER_PAGE = 7;
