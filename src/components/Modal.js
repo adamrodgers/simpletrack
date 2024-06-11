@@ -13,7 +13,7 @@ const Modal = ({ show, onClose, children, customerName }) => {
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
-        <div className="text-gray-900">{children}</div>
+        <div className="text-gray-900 whitespace-pre-wrap">{children}</div>
       </div>
     </div>
   );
