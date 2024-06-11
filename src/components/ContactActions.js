@@ -1,12 +1,39 @@
-import { PencilIcon, TrashIcon, ChatBubbleBottomCenterTextIcon } from "@heroicons/react/24/outline";
+import { useState } from "react";
+import { PencilIcon, TrashIcon, ChatBubbleBottomCenterTextIcon, HandThumbUpIcon, HandThumbDownIcon } from "@heroicons/react/24/outline";
 
 const ContactActions = ({ contact, onDelete, onEdit, onShowNotes }) => {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleDeleteClick = () => {
+    setConfirmDelete(true);
+  };
+
+  const handleConfirmDelete = () => {
+    onDelete(contact._id);
+    setConfirmDelete(false);
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmDelete(false);
+  };
+
   return (
     <td className="px-6 py-4">
       <div className="flex justify-end gap-4">
-        <button onClick={() => onDelete(contact._id)}>
-          <TrashIcon className="h-6 w-6 text-gray-600 hover:text-red-600" />
-        </button>
+        {confirmDelete ? (
+          <div className="flex gap-2">
+            <button onClick={handleConfirmDelete} className="text-green-600 hover:text-green-800">
+              <HandThumbUpIcon className="h-6 w-6" />
+            </button>
+            <button onClick={handleCancelDelete} className="text-red-600 hover:text-red-800">
+              <HandThumbDownIcon className="h-6 w-6" />
+            </button>
+          </div>
+        ) : (
+          <button onClick={handleDeleteClick}>
+            <TrashIcon className="h-6 w-6 text-gray-600 hover:text-red-600" />
+          </button>
+        )}
         <button onClick={() => onEdit(contact._id)}>
           <PencilIcon className="h-6 w-6 text-gray-600 hover:text-blue-600" />
         </button>
