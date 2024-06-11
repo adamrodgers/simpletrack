@@ -1,10 +1,11 @@
-import { PencilIcon, TrashIcon, ArrowsUpDownIcon } from "@heroicons/react/24/outline";
+import { ArrowsUpDownIcon } from "@heroicons/react/24/outline";
 import ContactStatus from "./ContactStatus";
 import PreferredContactMethod from "./PreferredContactMethod";
 import StateAbbreviation from "./StateAbbreviation";
 import InsuranceNeeds from "./InsuranceNeeds";
+import ContactActions from "./ContactActions";
 
-const ContactsTable = ({ contacts, onDelete, onEdit, onSort }) => {
+const ContactsTable = ({ contacts, onDelete, onEdit, onShowNotes, onSort }) => {
   return (
     <table className="w-full border-collapse bg-white text-left text-sm text-gray-500">
       <thead className="bg-gray-50">
@@ -45,16 +46,7 @@ const ContactsTable = ({ contacts, onDelete, onEdit, onSort }) => {
             <td className="px-6 py-4">{contact.currentInsCo}</td>
             <StateAbbreviation state={contact.state} />
             <InsuranceNeeds needs={contact.needs} />
-            <td className="px-6 py-4">
-              <div className="flex justify-end gap-4">
-                <button onClick={() => onDelete(contact._id)}>
-                  <TrashIcon className="h-6 w-6 text-gray-600 hover:text-red-600" />
-                </button>
-                <button onClick={() => onEdit(contact._id)}>
-                  <PencilIcon className="h-6 w-6 text-gray-600 hover:text-blue-600" />
-                </button>
-              </div>
-            </td>
+            <ContactActions contact={contact} onDelete={onDelete} onEdit={onEdit} onShowNotes={onShowNotes} />
           </tr>
         ))}
       </tbody>

@@ -211,6 +211,10 @@ function EditLeadComponent() {
               ))}
             </div>
           </div>
+          <div>
+            <label className="block text-gray-700">Notes</label>
+            <textarea name="notes" value={formData.notes} onChange={handleChange} className="w-full px-4 py-2 border rounded-md text-gray-900 focus:ring focus:ring-blue-200" rows="4" />
+          </div>
           <button type="submit" className="w-full bg-gray-700 text-white px-4 py-2 rounded-md shadow hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200">
             Save Changes
           </button>

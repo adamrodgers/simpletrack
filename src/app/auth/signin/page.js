@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import SearchBar from "../../../components/SearchBar";
 import Pagination from "../../../components/Pagination";
 import ContactsTable from "../../../components/ContactsTable";
+import Modal from "../../../components/Modal"; // Import the Modal component
 import { useContacts } from "../../../hooks/useContacts";
 
 const ITEMS_PER_PAGE = 7;
@@ -16,6 +17,9 @@ export default function Signin() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [currentNotes, setCurrentNotes] = useState("");
+  const [currentCustomerName, setCurrentCustomerName] = useState("");
   const router = useRouter();
 
   const { contacts, error, revalidate } = useContacts();
@@ -40,6 +44,21 @@ export default function Signin() {
 
   const editContact = (id) => {
     router.push(`/auth/editlead?id=${id}`);
+  };
+
+  const showNotes = (id) => {
+    const contact = contacts.find((contact) => contact._id === id);
+    if (contact) {
+      setCurrentCustomerName(contact.name);
+      setCurrentNotes(contact.notes || "No notes available");
+      setShowNotesModal(true);
+    }
+  };
+
+  const closeNotesModal = () => {
+    setShowNotesModal(false);
+    setCurrentNotes("");
+    setCurrentCustomerName("");
   };
 
   useEffect(() => {
@@ -89,7 +108,7 @@ export default function Signin() {
       <SearchBar searchTerm={searchTerm} onSearch={handleSearch} />
       <div className="overflow-hidden rounded-lg border border-gray-200 shadow-md w-full">
         {paginatedContacts.length > 0 ? (
-          <ContactsTable contacts={paginatedContacts} onDelete={deleteContact} onEdit={editContact} onSort={handleSort} />
+          <ContactsTable contacts={paginatedContacts} onDelete={deleteContact} onEdit={editContact} onShowNotes={showNotes} onSort={handleSort} />
         ) : (
           <div className="flex items-center justify-center p-4">
             <div className="flex flex-col items-center">
@@ -105,6 +124,9 @@ export default function Signin() {
         )}
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
       </div>
+      <Modal show={showNotesModal} onClose={closeNotesModal} customerName={currentCustomerName}>
+        <p>{currentNotes}</p>
+      </Modal>
     </div>
   );
 }
