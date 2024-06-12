@@ -3,14 +3,24 @@ import { PhoneIcon, EnvelopeIcon, ChatBubbleLeftRightIcon } from "@heroicons/rea
 const PreferredContactMethod = ({ methods, phone, email }) => {
   const iconClass = "h-5 w-5 text-gray-500";
 
+  const ContactIcon = ({ type }) => {
+    const icons = {
+      Phone: <PhoneIcon className={iconClass} />,
+      Email: <EnvelopeIcon className={iconClass} />,
+      Text: <ChatBubbleLeftRightIcon className={iconClass} />,
+    };
+
+    return icons[type] || null;
+  };
+
   return (
     <td className="px-6 py-4">
       <div className="text-gray-400">{phone}</div>
       <div className="text-gray-400">{email}</div>
       <div className="flex gap-1">
-        {methods.includes("Phone") && <PhoneIcon className={iconClass} />}
-        {methods.includes("Email") && <EnvelopeIcon className={iconClass} />}
-        {methods.includes("Text") && <ChatBubbleLeftRightIcon className={iconClass} />}
+        {methods.map((method) => (
+          <ContactIcon key={method} type={method} />
+        ))}
       </div>
     </td>
   );

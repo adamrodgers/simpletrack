@@ -1,3 +1,6 @@
+import React from "react";
+import PropTypes from "prop-types";
+
 const needLevels = {
   Auto: {
     bgColor: "bg-blue-50",
@@ -49,21 +52,30 @@ const needLevels = {
   },
 };
 
-const InsuranceNeeds = ({ needs }) => {
-  return (
-    <td className="px-6 py-4">
-      <div className="flex gap-2">
-        {needs.sort().map((need, idx) => {
-          const { bgColor, textColor } = needLevels[need] || { bgColor: "bg-gray-50", textColor: "text-gray-600" };
-          return (
-            <span key={idx} className={`inline-flex items-center gap-1 rounded-full ${bgColor} px-2 py-1 text-xs font-semibold ${textColor}`}>
-              {need}
-            </span>
-          );
-        })}
-      </div>
-    </td>
-  );
+const defaultLevel = {
+  bgColor: "bg-gray-50",
+  textColor: "text-gray-600",
+};
+
+const getNeedLevel = (need) => needLevels[need] || defaultLevel;
+
+const InsuranceNeeds = ({ needs }) => (
+  <td className="px-6 py-4">
+    <div className="flex gap-2">
+      {needs.sort().map((need, idx) => {
+        const { bgColor, textColor } = getNeedLevel(need);
+        return (
+          <span key={idx} className={`inline-flex items-center gap-1 rounded-full ${bgColor} px-2 py-1 text-xs font-semibold ${textColor}`}>
+            {need}
+          </span>
+        );
+      })}
+    </div>
+  </td>
+);
+
+InsuranceNeeds.propTypes = {
+  needs: PropTypes.arrayOf(PropTypes.string).isRequired,
 };
 
 export default InsuranceNeeds;
