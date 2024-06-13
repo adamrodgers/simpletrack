@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { INSURANCE_NEEDS } from "../utils/insurableItems";
 
 const INITIAL_FORM_DATA = {
   name: "",
@@ -16,8 +17,6 @@ const INITIAL_FORM_DATA = {
   preferredContact: [],
   notes: "",
 };
-
-const INSURANCE_NEEDS = ["Auto", "Home", "Boat", "Life", "Renters", "Pet", "Umbrella", "Business", "Earth Quake", "Flood", "Motorcycle", "RV"];
 
 const FormInput = ({ label, type = "text", name, value, onChange, ...rest }) => (
   <div>
