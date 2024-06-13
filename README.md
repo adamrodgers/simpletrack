@@ -8,15 +8,17 @@
 ![NextAuth](https://img.shields.io/badge/NextAuth-v4.24.7-blue)
 ![MongoDB](https://img.shields.io/badge/MongoDB-v6.6.2-blue)
 ![Node.js](https://img.shields.io/badge/Node.js-v16.0.0-blue)
+![FontAwesome](https://img.shields.io/badge/FontAwesome-v6.5.2-blue)
+![MaterialTailwind](https://img.shields.io/badge/MaterialTailwind-v2.1.9-blue)
 
-Sarah's CRM is a custom Customer Relationship Management system designed for tracking potential insurance leads. This application is built using modern web technologies such as React, NextJS, Tailwind CSS, NextAuth for authentication, HeroIcons for icons, MongoDB for the database, and Node.js for the server.
+Sarah's CRM is a custom Customer Relationship Management system designed for tracking potential insurance leads. This application is built using modern web technologies such as React, NextJS, Tailwind CSS, NextAuth for authentication, HeroIcons and FontAwesome for icons, MongoDB for the database, and Node.js for the server.
 
 ## Features
 
 - **Authentication**: Secure login using Google with NextAuth.
 - **Lead Management**: Add, edit, delete, and view insurance leads.
 - **Responsive Design**: Fully responsive design using Tailwind CSS.
-- **Icons**: Beautiful icons provided by HeroIcons v2.
+- **Icons**: Beautiful icons provided by HeroIcons and FontAwesome.
 - **Database**: MongoDB for efficient and scalable data storage.
 
 ## Tech Stack
@@ -26,6 +28,8 @@ Sarah's CRM is a custom Customer Relationship Management system designed for tra
 - **NextAuth**: Authentication for Next.js applications.
 - **Tailwind CSS**: Utility-first CSS framework for styling.
 - **HeroIcons**: Beautiful hand-crafted SVG icons, by the makers of Tailwind CSS.
+- **FontAwesome**: Icon library providing a wide range of icons.
+- **Material Tailwind**: Material Design components for Tailwind CSS.
 - **MongoDB**: NoSQL database for storing lead information.
 - **Node.js**: JavaScript runtime for server-side programming.
 
