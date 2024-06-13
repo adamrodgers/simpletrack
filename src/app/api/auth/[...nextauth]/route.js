@@ -37,7 +37,6 @@ const authOptions = {
       return true;
     },
     async redirect({ url, baseUrl }) {
-      if (url.startsWith(baseUrl)) return url;
       return baseUrl;
     },
     async session({ session, user, token }) {
