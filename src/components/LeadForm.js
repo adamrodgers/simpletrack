@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { INSURANCE_NEEDS } from "../utils/insurableItems";
 
 const INITIAL_FORM_DATA = {
   name: "",
@@ -27,11 +26,24 @@ const FormInput = ({ label, type = "text", name, value, onChange, ...rest }) => 
 
 const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, title }) => {
   const [formData, setFormData] = useState(initialFormData);
+  const [insuranceNeeds, setInsuranceNeeds] = useState([]);
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+
+    const fetchInsuranceNeeds = async () => {
+      try {
+        const response = await fetch("/api/insurable-items");
+        const data = await response.json();
+        setInsuranceNeeds(data.map((item) => item.name));
+      } catch (error) {
+        console.error("Error fetching insurance needs:", error);
+      }
+    };
+
+    fetchInsuranceNeeds();
   }, []);
 
   const handleChange = useCallback((e) => {
@@ -103,7 +115,7 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
           <div>
             <label className="block text-gray-700">Insurance Needs</label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-              {INSURANCE_NEEDS.map((need) => (
+              {insuranceNeeds.map((need) => (
                 <label key={need} className="flex items-center text-gray-900">
                   <input type="checkbox" value={need} checked={formData.needs.includes(need)} onChange={(e) => handleCheckChange(e, "needs")} className="mr-2 focus:ring focus:ring-blue-200" />
                   {need}
