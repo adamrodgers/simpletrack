@@ -9,7 +9,6 @@ import Pagination from "../../../components/Pagination";
 import ContactsTable from "../../../components/ContactsTable";
 import Modal from "../../../components/Modal";
 import { useContacts } from "../../../hooks/useContacts";
-import InsuranceNeeds from "../../../components/InsuranceNeeds";
 
 const ITEMS_PER_PAGE = 7;
 
@@ -21,20 +20,9 @@ export default function Signin() {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [currentNotes, setCurrentNotes] = useState("");
   const [currentCustomerName, setCurrentCustomerName] = useState("");
-  const [insurableItems, setInsurableItems] = useState([]);
   const router = useRouter();
 
   const { contacts, error, revalidate } = useContacts();
-
-  useEffect(() => {
-    const fetchInsurableItems = async () => {
-      const response = await fetch("/api/insurableItems");
-      const data = await response.json();
-      setInsurableItems(data);
-    };
-
-    fetchInsurableItems();
-  }, []);
 
   const deleteContact = async (id) => {
     try {
@@ -120,7 +108,7 @@ export default function Signin() {
       <SearchBar searchTerm={searchTerm} onSearch={handleSearch} />
       <div className="overflow-hidden rounded-lg border border-gray-200 shadow-md w-full">
         {paginatedContacts.length > 0 ? (
-          <ContactsTable contacts={paginatedContacts} onDelete={deleteContact} onEdit={editContact} onShowNotes={showNotes} onSort={handleSort} insurableItems={insurableItems} />
+          <ContactsTable contacts={paginatedContacts} onDelete={deleteContact} onEdit={editContact} onShowNotes={showNotes} onSort={handleSort} />
         ) : (
           <div className="flex items-center justify-center p-4">
             <div className="flex flex-col items-center">
@@ -134,7 +122,7 @@ export default function Signin() {
             </div>
           </div>
         )}
-        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} totalItems={filteredContacts.length} itemsPerPage={ITEMS_PER_PAGE} />
       </div>
       <Modal show={showNotesModal} onClose={closeNotesModal} customerName={currentCustomerName}>
         <p>{currentNotes}</p>
