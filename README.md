@@ -103,5 +103,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - [Tailwind CSS](https://tailwindcss.com/)
 - [NextAuth](https://next-auth.js.org/)
 - [HeroIcons](https://heroicons.com/)
+- [FontAwesome](https://fontawesome.com/)
+- [Material Tailwind](https://material-tailwind.com/)
 - [MongoDB](https://www.mongodb.com/)
 - [Node.js](https://nodejs.org/)
