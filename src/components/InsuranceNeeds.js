@@ -11,7 +11,6 @@ const InsuranceNeeds = ({ needs }) => {
     <td className="px-6 py-4">
       <div className="flex flex-wrap gap-1">
         {" "}
-        {/* Adjusted gap for less spacing */}
         {firstRow.map((need, idx) => {
           const { bgColor, textColor, icon } = getNeedLevel(need);
           return (
@@ -23,7 +22,7 @@ const InsuranceNeeds = ({ needs }) => {
         })}
         {secondRow.length > 0 && (
           <>
-            <span className="w-full h-px"></span> {/* This forces the next items to a new line */}
+            <span className="w-full h-px"></span>
             {secondRow.map((need, idx) => {
               const { bgColor, textColor, icon } = getNeedLevel(need);
               return (
