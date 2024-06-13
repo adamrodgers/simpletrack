@@ -1,16 +1,36 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { getNeedLevel } from "../utils/insurableItems";
+import { ICON_MAP } from "../utils/insurableItems";
 
 const InsuranceNeeds = ({ needs }) => {
+  const [insurableItems, setInsurableItems] = useState([]);
+
+  useEffect(() => {
+    const fetchInsurableItems = async () => {
+      try {
+        const response = await fetch("/api/insurable-items");
+        const data = await response.json();
+        setInsurableItems(data);
+      } catch (error) {
+        console.error("Error fetching insurable items:", error);
+      }
+    };
+
+    fetchInsurableItems();
+  }, []);
+
+  const getNeedLevel = (need) => {
+    const item = insurableItems.find((item) => item.name === need);
+    return item ? { ...item, icon: ICON_MAP[item.icon] } : { bgColor: "bg-gray-50", textColor: "text-gray-600", icon: null };
+  };
+
   const firstRow = needs.slice(0, 3);
   const secondRow = needs.slice(3);
 
   return (
     <td className="px-6 py-4">
       <div className="flex flex-wrap gap-1">
-        {" "}
         {firstRow.map((need, idx) => {
           const { bgColor, textColor, icon } = getNeedLevel(need);
           return (
