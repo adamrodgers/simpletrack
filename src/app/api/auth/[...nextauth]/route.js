@@ -29,9 +29,18 @@ const authOptions = {
           image: user.image,
           createdAt: new Date(),
           lastLoggedIn: new Date(),
+          isAdmin: user.id === process.env.ADMIN_ID,
         });
       } else {
-        await usersCollection.updateOne({ email: user.email }, { $set: { lastLoggedIn: new Date() } });
+        await usersCollection.updateOne(
+          { email: user.email },
+          {
+            $set: {
+              lastLoggedIn: new Date(),
+              isAdmin: user.id === process.env.ADMIN_ID,
+            },
+          }
+        );
       }
 
       return true;
@@ -41,11 +50,16 @@ const authOptions = {
     },
     async session({ session, user, token }) {
       session.user = token.user;
+      session.user.isAdmin = token.isAdmin;
       return session;
     },
     async jwt({ token, user, account }) {
       if (user) {
         token.user = user;
+        const { db } = await connectToDatabase();
+        const usersCollection = db.collection("users");
+        const dbUser = await usersCollection.findOne({ email: user.email });
+        token.isAdmin = dbUser?.isAdmin || false;
       }
       return token;
     },
