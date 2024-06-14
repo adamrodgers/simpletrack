@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 import SearchBar from "../../../components/SearchBar";
@@ -63,7 +63,7 @@ export default function Signin() {
 
   useEffect(() => {
     revalidate();
-  }, []);
+  }, [revalidate]);
 
   const handleSearch = (term) => {
     setSearchTerm(term);

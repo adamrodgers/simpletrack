@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 const withAdminAuth = (WrappedComponent) => {
-  return (props) => {
+  const Component = (props) => {
     const { data: session, status } = useSession();
     const router = useRouter();
 
@@ -25,6 +25,10 @@ const withAdminAuth = (WrappedComponent) => {
 
     return <WrappedComponent {...props} />;
   };
+
+  Component.displayName = `withAdminAuth(${WrappedComponent.displayName || WrappedComponent.name || "Component"})`;
+
+  return Component;
 };
 
 export default withAdminAuth;
