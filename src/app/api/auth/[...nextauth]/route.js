@@ -29,12 +29,17 @@ const authOptions = {
           image: user.image,
           createdAt: new Date(),
           lastLoggedIn: new Date(),
-          isAdmin: user.email === process.env.ADMIN_EMAIL, // Set admin status
+          isAdmin: user.id === process.env.ADMIN_ID,
         });
       } else {
         await usersCollection.updateOne(
           { email: user.email },
-          { $set: { lastLoggedIn: new Date(), isAdmin: existingUser.isAdmin || user.email === process.env.ADMIN_EMAIL } } // Ensure admin status is set
+          {
+            $set: {
+              lastLoggedIn: new Date(),
+              isAdmin: user.id === process.env.ADMIN_ID,
+            },
+          }
         );
       }
 
@@ -53,8 +58,8 @@ const authOptions = {
         token.user = user;
         const { db } = await connectToDatabase();
         const usersCollection = db.collection("users");
-        const existingUser = await usersCollection.findOne({ email: user.email });
-        token.isAdmin = existingUser.isAdmin;
+        const dbUser = await usersCollection.findOne({ email: user.email });
+        token.isAdmin = dbUser?.isAdmin || false;
       }
       return token;
     },

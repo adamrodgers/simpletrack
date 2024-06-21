@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { getContactLevel } from "../utils/contactLevels";
+import { getContactLevel } from "../../utils/contactLevels";
 
 const ContactStatus = ({ level, statusDate }) => {
   const { bgColor, textColor, dotColor, label } = getContactLevel(level);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { ICON_MAP } from "../utils/insurableItems";
+import { ICON_MAP } from "../../utils/insurableItems";
 
 const InsuranceNeeds = ({ needs }) => {
   const [insurableItems, setInsurableItems] = useState([]);
