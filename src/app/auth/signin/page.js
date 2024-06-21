@@ -4,8 +4,8 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
-import SearchBar from "../../../components/SearchBar";
-import Pagination from "../../../components/Pagination";
+import SearchBar from "../../../components/table/SearchBar";
+import Pagination from "../../../components/table/Pagination";
 import ContactsTable from "../../../components/table/ContactsTable";
 import Modal from "../../../components/Modal";
 import { useContacts } from "../../../hooks/useContacts";

@@ -1,7 +1,7 @@
 import React from "react";
 import ContactStatus from "./ContactStatus";
-import PreferredContactMethod from "../PreferredContactMethod";
-import StateAbbreviation from "../StateAbbreviation";
+import PreferredContactMethod from "./PreferredContactMethod";
+import StateAbbreviation from "./StateAbbreviation";
 import InsuranceNeeds from "./InsuranceNeeds";
 import ContactActions from "./ContactActions";
 
