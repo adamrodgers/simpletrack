@@ -16,6 +16,7 @@ export default function Signin() {
   const { data: session, status } = useSession();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [currentNotes, setCurrentNotes] = useState("");
@@ -69,17 +70,29 @@ export default function Signin() {
     setSearchTerm(term);
   };
 
-  const handleSort = () => {
-    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
   };
 
   const sortedContacts = contacts?.sort((a, b) => {
-    const nameA = a.name.split(" ").pop().toLowerCase();
-    const nameB = b.name.split(" ").pop().toLowerCase();
-    if (sortOrder === "asc") {
-      return nameA.localeCompare(nameB);
+    let valueA, valueB;
+    if (sortField === "name") {
+      valueA = a.name.split(" ").pop().toLowerCase();
+      valueB = b.name.split(" ").pop().toLowerCase();
+    } else if (sortField === "status") {
+      valueA = a.status.toLowerCase();
+      valueB = b.status.toLowerCase();
     }
-    return nameB.localeCompare(nameA);
+
+    if (sortOrder === "asc") {
+      return valueA.localeCompare(valueB);
+    }
+    return valueB.localeCompare(valueA);
   });
 
   const filteredContacts = sortedContacts?.filter((contact) => contact.name.toLowerCase().includes(searchTerm.toLowerCase()));
