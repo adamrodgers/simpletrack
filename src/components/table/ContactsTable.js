@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { ArrowsUpDownIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { useMediaQuery } from "react-responsive";
 import DesktopContactsTable from "./DesktopContactsTable";
 import MobileContactsTable from "./MobileContactsTable";
@@ -60,20 +61,7 @@ const ContactsTable = ({ contacts = [], onDelete, onEdit, onShowNotes }) => {
   }, []);
 
   if (isMobile) {
-    return (
-      <MobileContactsTable
-        contacts={sortedContacts}
-        selectedStatuses={selectedStatuses}
-        selectedInsuranceTypes={selectedInsuranceTypes}
-        toggleStatus={toggleStatus}
-        toggleInsuranceType={toggleInsuranceType}
-        getContactLevel={getContactLevel}
-        onDelete={onDelete}
-        onEdit={onEdit}
-        onShowNotes={onShowNotes}
-        insurableItems={insurableItems}
-      />
-    );
+    return <MobileContactsTable contacts={sortedContacts} getContactLevel={getContactLevel} onDelete={onDelete} onEdit={onEdit} onShowNotes={onShowNotes} />;
   }
 
   return (

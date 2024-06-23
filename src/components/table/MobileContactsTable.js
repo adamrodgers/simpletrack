@@ -1,7 +1,7 @@
 import React from "react";
 import { EnvelopeIcon, PhoneIcon } from "@heroicons/react/24/outline";
 
-const MobileContactsTable = ({ contacts, selectedStatuses, selectedInsuranceTypes, toggleStatus, toggleInsuranceType, getContactLevel, onDelete, onEdit, onShowNotes, insurableItems }) => {
+const MobileContactsTable = ({ contacts, getContactLevel, onDelete, onEdit, onShowNotes }) => {
   const groupedContacts = contacts.reduce((acc, contact) => {
     const level = contact.status;
     if (!acc[level]) {
