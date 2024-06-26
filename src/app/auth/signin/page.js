@@ -9,6 +9,7 @@ import Pagination from "../../../components/table/Pagination";
 import ContactsTable from "../../../components/table/ContactsTable";
 import Modal from "../../../components/Modal";
 import { useContacts } from "../../../hooks/useContacts";
+import { useMediaQuery } from "react-responsive";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -22,6 +23,7 @@ export default function Signin() {
   const [currentNotes, setCurrentNotes] = useState("");
   const [currentCustomerName, setCurrentCustomerName] = useState("");
   const router = useRouter();
+  const isMobile = useMediaQuery({ maxWidth: 767 });
 
   const { contacts, error, revalidate } = useContacts();
 
@@ -125,7 +127,7 @@ export default function Signin() {
   }
 
   const totalPages = Math.ceil(filteredContacts.length / ITEMS_PER_PAGE);
-  const paginatedContacts = filteredContacts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const paginatedContacts = isMobile ? filteredContacts : filteredContacts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -150,7 +152,7 @@ export default function Signin() {
             </div>
           </div>
         )}
-        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} totalItems={filteredContacts.length} itemsPerPage={ITEMS_PER_PAGE} />
+        {!isMobile && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} totalItems={filteredContacts.length} itemsPerPage={ITEMS_PER_PAGE} />}
       </div>
       <Modal show={showNotesModal} onClose={closeNotesModal} customerName={currentCustomerName}>
         <p>{currentNotes}</p>

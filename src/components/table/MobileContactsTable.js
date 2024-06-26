@@ -11,7 +11,12 @@ const MobileContactsTable = ({ contacts, getContactLevel, onDelete, onEdit, onSh
     return acc;
   }, {});
 
-  const contactLevelsOrder = ["pending", "initial", "followedUp", "notInterested", "quoted", "client"];
+  const contactLevelsOrder = ["pending", "initial", "followedUp", "quoted", "client", "notInterested"];
+
+  const getBackgroundClass = (textColorClass) => {
+    const color = textColorClass.split("-")[1];
+    return `bg-${color}-50`;
+  };
 
   return (
     <div className="w-full">
@@ -19,7 +24,7 @@ const MobileContactsTable = ({ contacts, getContactLevel, onDelete, onEdit, onSh
         <div key={level}>
           {groupedContacts[level] && groupedContacts[level].length > 0 && (
             <>
-              <h2 className={`text-lg font-semibold my-4 ${getContactLevel(level).textColor}`}>{getContactLevel(level).label}</h2>
+              <h2 className={`text-lg font-semibold my-4 text-center ${getContactLevel(level).textColor} ${getBackgroundClass(getContactLevel(level).textColor)}`}>{getContactLevel(level).label}</h2>
               {groupedContacts[level].map((contact) => (
                 <div key={contact._id} className="bg-white p-4 mb-4 rounded-lg shadow-md">
                   <div className="flex items-center mb-2">
