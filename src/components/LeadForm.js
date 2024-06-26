@@ -48,7 +48,11 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "status" && { statusDate: new Date().toISOString().slice(0, 10) }), // Update statusDate to today's date
+    }));
   }, []);
 
   const handleCheckChange = useCallback((e, field) => {
