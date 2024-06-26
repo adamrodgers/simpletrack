@@ -1,6 +1,8 @@
 import React from "react";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { ArrowsUpDownIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import ContactRow from "./ContactRow";
+import { getContactLevel, contactLevels } from "../../utils/contactLevels";
+import { ICON_MAP } from "../../utils/insurableItems";
 
 const DesktopContactsTable = ({
   contacts,
@@ -18,6 +20,7 @@ const DesktopContactsTable = ({
   onEdit,
   onShowNotes,
   insurableItems,
+  handleSort,
 }) => {
   const tableWrapperClasses = "overflow-auto";
   const tableClasses = "w-full border-collapse bg-white text-left text-sm text-gray-500";
@@ -32,8 +35,9 @@ const DesktopContactsTable = ({
       <table className={tableClasses}>
         <thead className={theadClasses}>
           <tr>
-            <th scope="col" className={thSortableClasses}>
+            <th scope="col" className={thSortableClasses} onClick={() => handleSort("name")}>
               Name
+              <ArrowsUpDownIcon className={iconClasses} />
             </th>
             <th scope="col" className={thClasses}>
               Contact

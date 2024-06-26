@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowsUpDownIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { useMediaQuery } from "react-responsive";
 import DesktopContactsTable from "./DesktopContactsTable";
 import MobileContactsTable from "./MobileContactsTable";
 import { getContactLevel, contactLevels } from "../../utils/contactLevels";
-import { ICON_MAP } from "../../utils/insurableItems";
 
-const ContactsTable = ({ contacts = [], onDelete, onEdit, onShowNotes }) => {
+const ContactsTable = ({ contacts = [], onDelete, onEdit, onShowNotes, handleSort }) => {
   const [sortedContacts, setSortedContacts] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState(Object.keys(contactLevels));
   const [selectedInsuranceTypes, setSelectedInsuranceTypes] = useState([]);
@@ -81,6 +79,7 @@ const ContactsTable = ({ contacts = [], onDelete, onEdit, onShowNotes }) => {
       onEdit={onEdit}
       onShowNotes={onShowNotes}
       insurableItems={insurableItems}
+      handleSort={handleSort}
     />
   );
 };

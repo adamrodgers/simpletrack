@@ -17,7 +17,7 @@ const SearchBar = ({ searchTerm, onSearch }) => {
     <div className={containerClass}>
       <div className="relative">
         <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-        <input type="text" placeholder="Search by name..." value={term} onChange={handleSearchChange} className={inputClass} />
+        <input type="text" placeholder="Search..." value={term} onChange={handleSearchChange} className={inputClass} />
       </div>
     </div>
   );

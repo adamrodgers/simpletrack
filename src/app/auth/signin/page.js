@@ -10,7 +10,7 @@ import ContactsTable from "../../../components/table/ContactsTable";
 import Modal from "../../../components/Modal";
 import { useContacts } from "../../../hooks/useContacts";
 
-const ITEMS_PER_PAGE = 7;
+const ITEMS_PER_PAGE = 6;
 
 export default function Signin() {
   const { data: session, status } = useSession();
@@ -67,7 +67,7 @@ export default function Signin() {
   }, [revalidate]);
 
   const handleSearch = (term) => {
-    setSearchTerm(term);
+    setSearchTerm(term.toLowerCase());
   };
 
   const handleSort = (field) => {
@@ -79,23 +79,38 @@ export default function Signin() {
     }
   };
 
-  const sortedContacts = contacts?.sort((a, b) => {
-    let valueA, valueB;
-    if (sortField === "name") {
-      valueA = a.name.split(" ").pop().toLowerCase();
-      valueB = b.name.split(" ").pop().toLowerCase();
-    } else if (sortField === "status") {
-      valueA = a.status.toLowerCase();
-      valueB = b.status.toLowerCase();
+  const sortContacts = (contacts, field, order) => {
+    if (!Array.isArray(contacts)) {
+      return [];
     }
 
-    if (sortOrder === "asc") {
-      return valueA.localeCompare(valueB);
-    }
-    return valueB.localeCompare(valueA);
+    return [...contacts].sort((a, b) => {
+      let valueA, valueB;
+      if (field === "name") {
+        valueA = a.name.split(" ").pop().toLowerCase();
+        valueB = b.name.split(" ").pop().toLowerCase();
+      } else if (field === "status") {
+        valueA = a.status.toLowerCase();
+        valueB = b.status.toLowerCase();
+      }
+      if (order === "asc") {
+        return valueA.localeCompare(valueB);
+      }
+      return valueB.localeCompare(valueA);
+    });
+  };
+
+  const sortedContacts = sortContacts(contacts, sortField, sortOrder);
+
+  const filteredContacts = sortedContacts?.filter((contact) => {
+    return (
+      contact.name.toLowerCase().includes(searchTerm) ||
+      contact.status.toLowerCase().includes(searchTerm) ||
+      contact.currentInsCo.toLowerCase().includes(searchTerm) ||
+      contact.state.toLowerCase().includes(searchTerm) ||
+      contact.needs.some((need) => need.toLowerCase().includes(searchTerm))
+    );
   });
-
-  const filteredContacts = sortedContacts?.filter((contact) => contact.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   if (status === "loading" || !contacts) {
     return <p>Loading...</p>;
@@ -121,7 +136,7 @@ export default function Signin() {
       <SearchBar searchTerm={searchTerm} onSearch={handleSearch} />
       <div className="overflow-hidden rounded-lg border border-gray-200 shadow-md w-full">
         {paginatedContacts.length > 0 ? (
-          <ContactsTable contacts={paginatedContacts} onDelete={deleteContact} onEdit={editContact} onShowNotes={showNotes} onSort={handleSort} />
+          <ContactsTable contacts={paginatedContacts} onDelete={deleteContact} onEdit={editContact} onShowNotes={showNotes} handleSort={handleSort} />
         ) : (
           <div className="flex items-center justify-center p-4">
             <div className="flex flex-col items-center">
