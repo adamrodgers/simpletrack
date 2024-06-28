@@ -1,4 +1,4 @@
-# Easy CRM
+# SimpleTrack
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-v18.2.0-blue)
@@ -11,7 +11,7 @@
 ![FontAwesome](https://img.shields.io/badge/FontAwesome-v6.5.2-blue)
 ![MaterialTailwind](https://img.shields.io/badge/MaterialTailwind-v2.1.9-blue)
 
-Easy CRM is a custom Customer Relationship Management system designed for tracking potential insurance leads. This application is built using modern web technologies such as React, NextJS, Tailwind CSS, NextAuth for authentication, HeroIcons and FontAwesome for icons, MongoDB for the database, and Node.js for the server.
+SimpleTrack is a custom Customer Relationship Management (CRM) system designed for tracking potential insurance leads. This application is built using modern web technologies such as React, NextJS, Tailwind CSS, NextAuth for authentication, HeroIcons and FontAwesome for icons, MongoDB for the database, and Node.js for the server.
 
 ## Features
 
@@ -35,11 +35,11 @@ Easy CRM is a custom Customer Relationship Management system designed for tracki
 
 ## Screenshots
 
-![Screenshot 1](https://github.com/adamrodgrs/easycrm/assets/80862221/0e27f32b-b81c-4d3e-871e-17bffb4a3cab)
+![Screenshot 1](https://github.com/adamrodgrs/simpletrack/assets/80862221/0e27f32b-b81c-4d3e-871e-17bffb4a3cab)
 
-![Screenshot 2](https://github.com/adamrodgrs/easycrm/assets/80862221/e8f7e1d9-c9a9-4fee-8eaa-f2dbe5d6fa5b)
+![Screenshot 2](https://github.com/adamrodgrs/simpletrack/assets/80862221/e8f7e1d9-c9a9-4fee-8eaa-f2dbe5d6fa5b)
 
-![Screenshot 3](https://github.com/adamrodgrs/easycrm/assets/80862221/02ac8165-8901-4dda-b98f-5a9827da1a04)
+![Screenshot 3](https://github.com/adamrodgrs/simpletrack/assets/80862221/02ac8165-8901-4dda-b98f-5a9827da1a04)
 
 ## Getting Started
 
@@ -53,8 +53,8 @@ Easy CRM is a custom Customer Relationship Management system designed for tracki
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/your-username/easycrm.git
-   cd easycrm
+   git clone https://github.com/your-username/simpletrack.git
+   cd simpletrack
    ```
 
 2. **Install dependencies**
