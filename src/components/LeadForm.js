@@ -80,7 +80,10 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
     e.preventDefault();
     const validationErrors = validateForm(formData);
     if (Object.keys(validationErrors).length === 0) {
-      await onSubmit(formData);
+      const success = await onSubmit(formData);
+      if (success) {
+        router.push("/auth/signin");
+      }
     } else {
       setErrors(validationErrors);
     }
