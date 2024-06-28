@@ -30,7 +30,7 @@ const NavBar = () => {
   return (
     <div className="h-screen bg-gray-50 dark:bg-gray-900 pattern p-2.5">
       <nav className="z-20 flex flex-col justify-around gap-4 border-t border-gray-200 bg-white/50 p-2.5 shadow-lg backdrop-blur-lg dark:border-slate-600/60 dark:bg-slate-800/50 min-h-[auto] rounded-lg border">
-        <UserProfile user={session.user} />
+        <UserProfile user={session.user} isAdmin={session.user.isAdmin} />
         <NavLink href="/auth/signin" icon={<HomeIcon className="w-6 h-6 shrink-0" />} label="Home" />
         <NavLink href="/auth/addlead" icon={<UserPlusIcon className="w-6 h-6 shrink-0" />} label="Add Lead" />
         {session.user.isAdmin && (

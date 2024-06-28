@@ -1,5 +1,4 @@
 const stateNames = {
-  // State Abbreviations
   AL: "Alabama",
   AK: "Alaska",
   AZ: "Arizona",
@@ -56,7 +55,6 @@ const stateNames = {
   MP: "Northern Mariana Islands",
   PR: "Puerto Rico",
   VI: "United States Virgin Islands",
-  // State Names
   Alabama: "AL",
   Alaska: "AK",
   Arizona: "AZ",
