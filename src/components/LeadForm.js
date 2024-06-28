@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import FormInput from "./FormInput";
+import { validateForm } from "../utils/validationUtil";
 
 const INITIAL_FORM_DATA = {
   name: "",
@@ -17,15 +19,9 @@ const INITIAL_FORM_DATA = {
   notes: "",
 };
 
-const FormInput = ({ label, type = "text", name, value, onChange, ...rest }) => (
-  <div>
-    <label className="block text-gray-700">{label}</label>
-    <input type={type} name={name} value={value} onChange={onChange} className="w-full px-4 py-2 border rounded-md text-gray-900 focus:ring focus:ring-blue-200" {...rest} />
-  </div>
-);
-
 const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, title }) => {
   const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState({});
   const [insuranceNeeds, setInsuranceNeeds] = useState([]);
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -82,7 +78,12 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await onSubmit(formData);
+    const validationErrors = validateForm(formData);
+    if (Object.keys(validationErrors).length === 0) {
+      await onSubmit(formData);
+    } else {
+      setErrors(validationErrors);
+    }
   };
 
   const handleCancel = () => {
@@ -97,13 +98,13 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
         <h2 className="text-3xl font-bold mb-6 text-center text-gray-700">{title}</h2>
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormInput label="Name" name="name" value={formData.name} onChange={handleChange} required />
-            <FormInput label="Occupation" name="occupation" value={formData.occupation} onChange={handleChange} required />
-            <FormInput label="Email" type="email" name="email" value={formData.email} onChange={handleChange} required />
-            <FormInput label="Phone" type="tel" name="phone" value={formData.phone} onChange={handlePhoneChange} required />
+            <FormInput label="Name" name="name" value={formData.name} onChange={handleChange} error={errors.name} />
+            <FormInput label="Occupation" name="occupation" value={formData.occupation} onChange={handleChange} error={errors.occupation} />
+            <FormInput label="Email" type="email" name="email" value={formData.email} onChange={handleChange} error={errors.email} />
+            <FormInput label="Phone" type="tel" name="phone" value={formData.phone} onChange={handlePhoneChange} error={errors.phone} />
             <div>
               <label className="block text-gray-700">Status</label>
-              <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-2 border rounded-md text-gray-900 focus:ring focus:ring-blue-200" required>
+              <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-2 border rounded-md text-gray-900 focus:ring focus:ring-blue-200">
                 <option value="initial">Initial</option>
                 <option value="pending">Pending</option>
                 <option value="followedUp">Followed Up</option>
@@ -112,9 +113,9 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
                 <option value="notInterested">Not Interested</option>
               </select>
             </div>
-            <FormInput label="Status Date" type="date" name="statusDate" value={formData.statusDate} onChange={handleChange} required />
-            <FormInput label="Current Insurance Company" name="currentInsCo" value={formData.currentInsCo} onChange={handleChange} required />
-            <FormInput label="State" name="state" value={formData.state} onChange={handleChange} required />
+            <FormInput label="Status Date" type="date" name="statusDate" value={formData.statusDate} onChange={handleChange} error={errors.statusDate} />
+            <FormInput label="Current Insurance Company" name="currentInsCo" value={formData.currentInsCo} onChange={handleChange} error={errors.currentInsCo} />
+            <FormInput label="State" name="state" value={formData.state} onChange={handleChange} error={errors.state} />
           </div>
           <div>
             <label className="block text-gray-700">Insurance Needs</label>
