@@ -40,12 +40,15 @@ function EditLeadComponent() {
       if (response.ok) {
         alert("Contact updated successfully!");
         router.push("/auth/signin");
+        return true;
       } else {
         alert("Failed to update contact");
+        return false;
       }
     } catch (error) {
       console.error("Error:", error);
       alert("Failed to update contact");
+      return false;
     }
   };
 
