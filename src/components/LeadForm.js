@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import FormInput from "./FormInput";
+import FormInput from "./table/FormInput";
 import { validateForm } from "../utils/validationUtil";
 
 const INITIAL_FORM_DATA = {
