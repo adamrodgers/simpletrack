@@ -3,6 +3,7 @@
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Image from "next/image";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -23,15 +24,10 @@ export default function Home() {
       {!session && (
         <div className="bg-white dark:bg-gray-900">
           <div className="flex justify-center h-screen w-screen">
-            <div
-              className="hidden bg-cover lg:block lg:w-2/3 bg-center"
-              style={{
-                backgroundImage: "url(https://unsplash.com/photos/mCj7atG0nEc/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzE2NzU1MDk4fA&force=true&w=1920)",
-              }}
-            >
+            <div className="hidden bg-cover lg:block lg:w-2/3 bg-center">
               <div className="flex items-center h-full px-20 bg-gray-900 bg-opacity-40">
-                <div>
-                  <h2 className="text-4xl font-bold text-white">SimpleTrack</h2>
+                <div className="flex flex-col items-center">
+                  <Image src="/logo.png" alt="SimpleTrack Logo" width={200} height={200} className="w-full mx-auto" priority />
                   <p className="max-w-xl mt-3 text-gray-300">Custom CRM to keep track of potential leads and clients.</p>
                 </div>
               </div>
