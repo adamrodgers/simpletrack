@@ -35,11 +35,11 @@ SimpleTrack is a custom Customer Relationship Management (CRM) system designed f
 
 ## Screenshots
 
-![Screenshot 1](https://github.com/adamrodgrs/simpletrack/assets/80862221/0e27f32b-b81c-4d3e-871e-17bffb4a3cab)
+![Screenshot 1](https://github.com/adamrodgers/simpletrack/assets/80862221/0e27f32b-b81c-4d3e-871e-17bffb4a3cab)
 
-![Screenshot 2](https://github.com/adamrodgrs/simpletrack/assets/80862221/e8f7e1d9-c9a9-4fee-8eaa-f2dbe5d6fa5b)
+![Screenshot 2](https://github.com/adamrodgers/simpletrack/assets/80862221/e8f7e1d9-c9a9-4fee-8eaa-f2dbe5d6fa5b)
 
-![Screenshot 3](https://github.com/adamrodgrs/simpletrack/assets/80862221/02ac8165-8901-4dda-b98f-5a9827da1a04)
+![Screenshot 3](https://github.com/adamrodgers/simpletrack/assets/80862221/02ac8165-8901-4dda-b98f-5a9827da1a04)
 
 ## Getting Started
 
