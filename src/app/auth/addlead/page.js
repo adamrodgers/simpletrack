@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import LeadForm from "../../../components/LeadForm";
 import { useRouter } from "next/navigation";
+import { toast, Toaster } from "react-hot-toast";
 
 export default function AddLead() {
   const { data: session } = useSession();
@@ -17,18 +18,23 @@ export default function AddLead() {
       });
 
       if (response.ok) {
-        alert("Contact added successfully!");
+        toast.success("Contact added successfully!");
         return true;
       } else {
-        alert("Failed to add contact");
+        toast.error("Failed to add contact");
         return false;
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Failed to add contact");
+      toast.error("Failed to add contact");
       return false;
     }
   };
 
-  return <LeadForm onSubmit={handleSubmit} buttonText="Add Lead" title="Add New Lead" />;
+  return (
+    <>
+      <Toaster position="top-center" reverseOrder={false} />
+      <LeadForm onSubmit={handleSubmit} buttonText="Add Lead" title="Add New Lead" />
+    </>
+  );
 }
