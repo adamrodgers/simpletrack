@@ -2,6 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import "./globals.css";
+import "react-hot-toast/dist/react-hot-toast.css";
 import NavBar from "../components/NavBar";
 import SessionChecker from "../components/SessionChecker";
 
