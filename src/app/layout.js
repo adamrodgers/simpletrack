@@ -2,7 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import "./globals.css";
-import "react-hot-toast/dist/react-hot-toast.css";
+import { Toaster } from "react-hot-toast";
 import NavBar from "../components/NavBar";
 import SessionChecker from "../components/SessionChecker";
 
@@ -18,6 +18,7 @@ export default function RootLayout({ children }) {
             </div>
           </SessionChecker>
         </SessionProvider>
+        <Toaster position="top-center" reverseOrder={false} />
       </body>
     </html>
   );
