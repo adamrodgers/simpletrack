@@ -1,8 +1,8 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { connectToDatabase } from "../../../../utils/mongodb";
+import { handleSignIn, getUserByEmail } from "../../../../utils/authHelpers";
 
-const authOptions = {
+export const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -15,50 +15,21 @@ const authOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile, email, credentials }) {
-      const { db } = await connectToDatabase();
-      const usersCollection = db.collection("users");
-
-      const existingUser = await usersCollection.findOne({ email: user.email });
-
-      if (!existingUser) {
-        await usersCollection.insertOne({
-          userId: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-          createdAt: new Date(),
-          lastLoggedIn: new Date(),
-          isAdmin: user.id === process.env.ADMIN_ID,
-        });
-      } else {
-        await usersCollection.updateOne(
-          { email: user.email },
-          {
-            $set: {
-              lastLoggedIn: new Date(),
-              isAdmin: user.id === process.env.ADMIN_ID,
-            },
-          }
-        );
-      }
-
-      return true;
+    async signIn({ user }) {
+      return handleSignIn(user);
     },
-    async redirect({ url, baseUrl }) {
+    async redirect({ baseUrl }) {
       return baseUrl;
     },
-    async session({ session, user, token }) {
+    async session({ session, token }) {
       session.user = token.user;
       session.user.isAdmin = token.isAdmin;
       return session;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user) {
         token.user = user;
-        const { db } = await connectToDatabase();
-        const usersCollection = db.collection("users");
-        const dbUser = await usersCollection.findOne({ email: user.email });
+        const dbUser = await getUserByEmail(user.email);
         token.isAdmin = dbUser?.isAdmin || false;
       }
       return token;
@@ -70,14 +41,23 @@ const authOptions = {
   },
   session: {
     strategy: "jwt",
+    maxAge: 24 * 60 * 60,
+  },
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 24 * 60 * 60,
+      },
+    },
   },
   useSecureCookies: process.env.NODE_ENV === "production",
 };
 
-export const GET = async (req, res) => {
-  return NextAuth(req, res, authOptions);
-};
+const handler = NextAuth(authOptions);
 
-export const POST = async (req, res) => {
-  return NextAuth(req, res, authOptions);
-};
+export { handler as GET, handler as POST };
