@@ -1,5 +1,10 @@
 import { connectToDatabase } from "../../../utils/mongodb";
 import { getServerSession } from "next-auth/next";
+import Joi from "joi";
+
+const querySchema = Joi.object({
+  userId: Joi.string().required(),
+});
 
 export const dynamic = "force-dynamic";
 
@@ -9,20 +14,17 @@ export async function GET(req) {
   if (!session) {
     return new Response(JSON.stringify({ message: "Unauthorized" }), {
       status: 401,
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
     });
   }
 
   const userId = new URL(req.url).searchParams.get("userId");
 
-  if (!userId) {
-    return new Response(JSON.stringify({ message: "Missing user ID" }), {
+  const { error } = querySchema.validate({ userId });
+  if (error) {
+    return new Response(JSON.stringify({ message: "Invalid query parameters", error: error.details }), {
       status: 400,
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
     });
   }
 
@@ -43,9 +45,7 @@ export async function GET(req) {
   } catch (error) {
     return new Response(JSON.stringify({ message: "Error fetching contacts", error: error.message }), {
       status: 500,
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
     });
   }
 }
