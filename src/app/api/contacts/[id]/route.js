@@ -11,18 +11,19 @@ const idSchema = Joi.string().custom((value, helpers) => {
 
 const contactSchema = Joi.object({
   name: Joi.string().required(),
-  occupation: Joi.string().optional(),
-  email: Joi.string().email().optional(),
+  occupation: Joi.string().optional().allow(""),
+  email: Joi.string().email().optional().allow(""),
   phone: Joi.string()
     .pattern(/^\d{3}-\d{3}-\d{4}$/)
-    .optional(),
+    .optional()
+    .allow(""),
   status: Joi.string().valid("initial", "pending", "followedUp", "quoted", "client", "notInterested").required(),
   statusDate: Joi.date().max("now").required(),
-  currentInsCo: Joi.string().optional(),
-  state: Joi.string().optional(),
-  needs: Joi.array().items(Joi.string()).optional(),
-  preferredContact: Joi.array().items(Joi.string()).optional(),
-  notes: Joi.string().optional(),
+  currentInsCo: Joi.string().optional().allow(""),
+  state: Joi.string().optional().allow(""),
+  needs: Joi.array().items(Joi.string()).optional().allow(""),
+  preferredContact: Joi.array().items(Joi.string()).optional().allow(""),
+  notes: Joi.string().optional().allow(""),
 }).unknown();
 
 export async function GET(request, { params }) {
