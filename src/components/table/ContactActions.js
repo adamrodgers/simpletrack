@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PencilIcon, TrashIcon, ChatBubbleBottomCenterTextIcon, HandThumbUpIcon, HandThumbDownIcon } from "@heroicons/react/24/outline";
+import { toast } from "react-hot-toast";
 
 const ConfirmDeleteButtons = ({ onConfirm, onCancel }) => (
   <div className="flex gap-2">
@@ -20,6 +21,10 @@ const ContactActions = ({ contact, onDelete, onEdit, onShowNotes }) => {
   const handleConfirmDelete = () => {
     onDelete(contact._id);
     setConfirmDelete(false);
+    toast.success("Contact deleted successfully!", {
+      duration: 3000,
+      position: "top-center",
+    });
   };
 
   const handleCancelDelete = () => setConfirmDelete(false);
