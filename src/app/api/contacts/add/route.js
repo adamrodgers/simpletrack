@@ -4,10 +4,10 @@ import Joi from "joi";
 const contactSchema = Joi.object({
   name: Joi.string().required(),
   occupation: Joi.string().optional(),
-  email: Joi.string().email().required(),
+  email: Joi.string().email().optional(),
   phone: Joi.string()
     .pattern(/^\d{3}-\d{3}-\d{4}$/)
-    .required(),
+    .optional(),
   status: Joi.string().valid("initial", "pending", "followedUp", "quoted", "client", "notInterested").required(),
   statusDate: Joi.date().max("now").required(),
   currentInsCo: Joi.string().optional(),
