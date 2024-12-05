@@ -107,7 +107,7 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
           <label>Upload Image</label>
           <input type="file" accept="image/*" onChange={handleImageUpload} />
           {isProcessing && <p>Processing image...</p>}
-          {image && <image src={image} alt="Uploaded Preview" style={{ maxWidth: "200px", marginTop: "10px" }} />}
+          {image && <img src={image} alt="Uploaded Preview" style={{ maxWidth: "200px", marginTop: "10px" }} />}
         </div>
         <div>
           <label>Name</label>
