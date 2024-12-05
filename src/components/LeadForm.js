@@ -54,11 +54,16 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
     setIsProcessing(true);
 
     try {
+      // Use Tesseract to recognize text
       const { data } = await Tesseract.recognize(file, "eng");
-      const text = data.text;
 
-      // Parse extracted text
-      const extractedData = parseExtractedText(text);
+      // Log the extracted text for debugging
+      console.log("Extracted Text:", data.text);
+
+      // Parse extracted text into form fields
+      const extractedData = parseExtractedText(data.text);
+      console.log("Parsed Data:", extractedData); // Log the parsed data for further debugging
+
       setFormData((prev) => ({ ...prev, ...extractedData }));
     } catch (error) {
       console.error("Error with OCR:", error);
