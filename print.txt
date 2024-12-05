@@ -1,0 +1,2257 @@
+File: ./src/app/api/auth/[...nextauth]/route.js
+
+import NextAuth from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import { handleSignIn, getUserByEmail } from "../../../../utils/authHelpers";
+
+export const authOptions = {
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          prompt: "select_account",
+        },
+      },
+    }),
+  ],
+  callbacks: {
+    async signIn({ user }) {
+      return handleSignIn(user);
+    },
+    async redirect({ baseUrl }) {
+      return baseUrl;
+    },
+    async session({ session, token }) {
+      session.user = token.user;
+      session.user.isAdmin = token.isAdmin;
+      return session;
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.user = user;
+        const dbUser = await getUserByEmail(user.email);
+        token.isAdmin = dbUser?.isAdmin || false;
+      }
+      return token;
+    },
+  },
+  pages: {
+    signIn: "/auth/signin",
+    error: "/auth/error",
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 24 * 60 * 60,
+  },
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 24 * 60 * 60,
+      },
+    },
+  },
+  useSecureCookies: process.env.NODE_ENV === "production",
+};
+
+const handler = NextAuth(authOptions);
+
+export { handler as GET, handler as POST };
+
+----------------------------------------
+
+File: ./src/app/api/contacts/[id]/route.js
+
+import { connectToDatabase } from "../../../../utils/mongodb";
+import { ObjectId } from "mongodb";
+import Joi from "joi";
+
+const idSchema = Joi.string().custom((value, helpers) => {
+  if (!ObjectId.isValid(value)) {
+    return helpers.error("any.invalid");
+  }
+  return value;
+}, "ObjectId validation");
+
+const contactSchema = Joi.object({
+  name: Joi.string().required(),
+  occupation: Joi.string().optional().allow(""),
+  email: Joi.string().email().optional().allow(""),
+  phone: Joi.string()
+    .pattern(/^\d{3}-\d{3}-\d{4}$/)
+    .optional()
+    .allow(""),
+  status: Joi.string().valid("initial", "pending", "followedUp", "quoted", "client", "notInterested").required(),
+  statusDate: Joi.date().max("now").required(),
+  currentInsCo: Joi.string().optional().allow(""),
+  state: Joi.string().optional().allow(""),
+  needs: Joi.array().items(Joi.string()).optional().allow(""),
+  preferredContact: Joi.array().items(Joi.string()).optional().allow(""),
+  notes: Joi.string().optional().allow(""),
+}).unknown();
+
+export async function GET(request, { params }) {
+  console.log("GET request received at /api/contacts/[id]");
+  const start = Date.now();
+
+  const { error: idError } = idSchema.validate(params.id);
+  if (idError) {
+    console.error("Invalid ID format");
+    return new Response(JSON.stringify({ message: "Invalid ID format" }), {
+      status: 400,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }
+
+  try {
+    const { db } = await connectToDatabase();
+    const { id } = params;
+
+    const contact = await db.collection("contacts").findOne({ _id: new ObjectId(id) });
+
+    const duration = Date.now() - start;
+    console.log(`Query completed in ${duration}ms`);
+
+    if (contact) {
+      return new Response(JSON.stringify(contact), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    } else {
+      console.error("Contact not found");
+      return new Response(JSON.stringify({ message: "Contact not found" }), {
+        status: 404,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching contact:", error);
+    return new Response(JSON.stringify({ message: "Error fetching contact", error: error.message }), {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }
+}
+
+export async function PUT(request, { params }) {
+  try {
+    const { db } = await connectToDatabase();
+    const { id } = params;
+    const data = await request.json();
+
+    // Validate id
+    const { error: idError } = idSchema.validate(id);
+    if (idError) {
+      console.error("Invalid ID format");
+      return new Response(JSON.stringify({ message: "Invalid ID format" }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }
+
+    const { error: bodyError } = contactSchema.validate(data);
+    if (bodyError) {
+      console.error("Invalid request body", bodyError);
+      return new Response(JSON.stringify({ message: "Invalid request body", error: bodyError.details }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }
+
+    delete data._id;
+
+    const result = await db.collection("contacts").updateOne({ _id: new ObjectId(id) }, { $set: data });
+
+    if (result.matchedCount === 1) {
+      return new Response(JSON.stringify({ message: "Contact updated successfully" }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    } else {
+      console.error("Contact not found");
+      return new Response(JSON.stringify({ message: "Contact not found" }), {
+        status: 404,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Error updating contact:", error);
+    return new Response(JSON.stringify({ message: "Error updating contact", error: error.message }), {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }
+}
+
+export async function DELETE(request, { params }) {
+  try {
+    const { db } = await connectToDatabase();
+    const { id } = params;
+
+    const { error: idError } = idSchema.validate(id);
+    if (idError) {
+      console.error("Invalid ID format");
+      return new Response(JSON.stringify({ message: "Invalid ID format" }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }
+
+    const result = await db.collection("contacts").deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 1) {
+      return new Response(JSON.stringify({ message: "Contact deleted successfully" }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    } else {
+      console.error("Contact not found");
+      return new Response(JSON.stringify({ message: "Contact not found" }), {
+        status: 404,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Error deleting contact:", error);
+    return new Response(JSON.stringify({ message: "Error deleting contact", error: error.message }), {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }
+}
+
+----------------------------------------
+
+File: ./src/app/api/contacts/add/route.js
+
+import { connectToDatabase } from "../../../../utils/mongodb";
+import Joi from "joi";
+
+const contactSchema = Joi.object({
+  name: Joi.string().required(),
+  occupation: Joi.string().optional().allow(""),
+  email: Joi.string().email().optional().allow(""),
+  phone: Joi.string()
+    .pattern(/^\d{3}-\d{3}-\d{4}$/)
+    .optional()
+    .allow(""),
+  status: Joi.string().valid("initial", "pending", "followedUp", "quoted", "client", "notInterested").required(),
+  statusDate: Joi.date().max("now").required(),
+  currentInsCo: Joi.string().optional().allow(""),
+  state: Joi.string().optional().allow(""),
+  needs: Joi.array().items(Joi.string()).optional().allow(""),
+  preferredContact: Joi.array().items(Joi.string()).optional().allow(""),
+  notes: Joi.string().optional().allow(""),
+}).unknown();
+
+export async function POST(request) {
+  console.log("API route hit");
+
+  try {
+    const { db } = await connectToDatabase();
+    const data = await request.json();
+
+    console.log("Data received:", data);
+
+    const { error } = contactSchema.validate(data);
+    if (error) {
+      console.error("Invalid request body", error);
+      return new Response(JSON.stringify({ message: "Invalid request body", error: error.details }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const result = await db.collection("contacts").insertOne(data);
+
+    return new Response(JSON.stringify({ insertedId: result.insertedId }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    return new Response(JSON.stringify({ message: "Error adding contact", error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+----------------------------------------
+
+File: ./src/app/api/contacts/route.js
+
+import { connectToDatabase } from "../../../utils/mongodb";
+import { getServerSession } from "next-auth/next";
+import Joi from "joi";
+
+const querySchema = Joi.object({
+  userId: Joi.string().required(),
+});
+
+export const dynamic = "force-dynamic";
+
+export async function GET(req) {
+  const session = await getServerSession(req);
+
+  if (!session) {
+    return new Response(JSON.stringify({ message: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const userId = new URL(req.url).searchParams.get("userId");
+
+  const { error } = querySchema.validate({ userId });
+  if (error) {
+    return new Response(JSON.stringify({ message: "Invalid query parameters", error: error.details }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    const { db } = await connectToDatabase();
+    const contacts = await db.collection("contacts").find({ userId }).toArray();
+
+    return new Response(JSON.stringify(contacts), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+        "Surrogate-Control": "no-store",
+      },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ message: "Error fetching contacts", error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+----------------------------------------
+
+File: ./src/app/api/insurable-items/route.js
+
+import { connectToDatabase } from "../../../utils/mongodb";
+
+export async function GET(request) {
+  try {
+    const { db } = await connectToDatabase();
+    const insurableItems = await db.collection("insurableItems").find({}).toArray();
+    return new Response(JSON.stringify(insurableItems), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: "Failed to fetch insurable items" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+----------------------------------------
+
+File: ./src/app/auth/addlead/page.js
+
+"use client";
+
+import { useSession } from "next-auth/react";
+import LeadForm from "../../../components/LeadForm";
+import { useRouter } from "next/navigation";
+import { toast, Toaster } from "react-hot-toast";
+
+export default function AddLead() {
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  const handleSubmit = async (formData) => {
+    try {
+      const response = await fetch("/api/contacts/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, userId: session.user.id }),
+      });
+
+      if (response.ok) {
+        toast.success("Contact added successfully!");
+        return true;
+      } else {
+        toast.error("Failed to add contact");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Failed to add contact");
+      return false;
+    }
+  };
+
+  return (
+    <>
+      <Toaster position="top-center" reverseOrder={false} />
+      <LeadForm onSubmit={handleSubmit} buttonText="Add Lead" title="Add New Lead" />
+    </>
+  );
+}
+
+----------------------------------------
+
+File: ./src/app/auth/admin/page.js
+
+"use client";
+
+import withAdminAuth from "../../../utils/withAdminAuth";
+
+const AdminPage = () => {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <h1 className="text-3xl font-bold text-gray-700">Admin Page</h1>
+      <p className="text-gray-500">This is a placeholder for the Admin Page.</p>
+    </div>
+  );
+};
+
+export default withAdminAuth(AdminPage);
+
+----------------------------------------
+
+File: ./src/app/auth/editlead/page.js
+
+"use client";
+
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import LeadForm from "../../../components/LeadForm";
+import { toast, Toaster } from "react-hot-toast";
+
+function EditLeadComponent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
+  const [formData, setFormData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchContact() {
+      if (id) {
+        try {
+          const res = await fetch(`/api/contacts/${id}`);
+          if (!res.ok) {
+            throw new Error("Failed to fetch contact data");
+          }
+          const data = await res.json();
+          setFormData(data);
+        } catch (error) {
+          console.error("Error fetching contact:", error);
+          setError("Failed to load contact data. Please try again.");
+          toast.error("Failed to load contact data");
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchContact();
+  }, [id]);
+
+  const handleSubmit = async (formData) => {
+    const updatePromise = fetch(`/api/contacts/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+
+    toast.promise(updatePromise, {
+      loading: "Updating contact...",
+      success: (response) => {
+        if (response.ok) {
+          router.push("/auth/signin");
+          return "Contact updated successfully!";
+        } else {
+          throw new Error("Failed to update contact");
+        }
+      },
+      error: "Failed to update contact",
+    });
+
+    try {
+      const response = await updatePromise;
+      return response.ok;
+    } catch (error) {
+      console.error("Error:", error);
+      return false;
+    }
+  };
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>{error}</div>;
+  if (!formData) return <div>No contact data found</div>;
+
+  return <LeadForm initialFormData={formData} onSubmit={handleSubmit} buttonText="Save Changes" title="Edit Lead" />;
+}
+
+export default function EditLead() {
+  return (
+    <>
+      <Toaster position="top-center" reverseOrder={false} />
+      <Suspense fallback={<div>Loading...</div>}>
+        <EditLeadComponent />
+      </Suspense>
+    </>
+  );
+}
+
+----------------------------------------
+
+File: ./src/app/auth/error/page.js
+
+"use client";
+
+import { signOut } from "next-auth/react";
+
+export default function Error() {
+  const handleSignOut = () => {
+    signOut({ callbackUrl: "/" });
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex items-center justify-between bg-white p-8 rounded shadow-lg space-x-8 max-w-lg">
+        <h1 className="text-xl font-medium text-black text-center">You are not authorized to view this page.</h1>
+        <div className="border-l-2 border-gray-300 h-12"></div>
+        <button onClick={handleSignOut}>Sign out</button>
+        <button className="gsi-material-button" onClick={handleSignOut}>
+          <div className="gsi-material-button-state"></div>
+          <div className="gsi-material-button-content-wrapper">
+            <span className="gsi-material-button-contents">Sign out</span>
+            <span style={{ display: "none" }}>Sign out</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+----------------------------------------
+
+File: ./src/app/auth/signin/page.js
+
+"use client";
+
+import { useSession } from "next-auth/react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+
+import SearchBar from "../../../components/table/SearchBar";
+import Pagination from "../../../components/table/Pagination";
+import ContactsTable from "../../../components/table/ContactsTable";
+import Modal from "../../../components/Modal";
+import { useContacts } from "../../../hooks/useContacts";
+import { useMediaQuery } from "react-responsive";
+
+const ITEMS_PER_PAGE = 6;
+
+export default function Signin() {
+  const { data: session, status } = useSession();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [currentNotes, setCurrentNotes] = useState("");
+  const [currentCustomerName, setCurrentCustomerName] = useState("");
+  const router = useRouter();
+  const isMobile = useMediaQuery({ maxWidth: 767 });
+
+  const { contacts, error, revalidate } = useContacts();
+
+  const deleteContact = async (id) => {
+    try {
+      const response = await fetch(`/api/contacts/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        revalidate();
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to delete contact: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error("Error deleting contact:", error);
+      alert("Failed to delete contact");
+    }
+  };
+
+  const editContact = (id) => {
+    router.push(`/auth/editlead?id=${id}`);
+  };
+
+  const showNotes = (id) => {
+    const contact = contacts.find((contact) => contact._id === id);
+    if (contact) {
+      setCurrentCustomerName(contact.name);
+      setCurrentNotes(contact.notes || "No notes available");
+      setShowNotesModal(true);
+    }
+  };
+
+  const closeNotesModal = () => {
+    setShowNotesModal(false);
+    setCurrentNotes("");
+    setCurrentCustomerName("");
+  };
+
+  useEffect(() => {
+    revalidate();
+  }, [revalidate]);
+
+  const handleSearch = (term) => {
+    setSearchTerm(term.toLowerCase());
+  };
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  const sortContacts = (contacts, field, order) => {
+    if (!Array.isArray(contacts)) {
+      return [];
+    }
+
+    return [...contacts].sort((a, b) => {
+      let valueA, valueB;
+      if (field === "name") {
+        valueA = a.name.split(" ").pop().toLowerCase();
+        valueB = b.name.split(" ").pop().toLowerCase();
+      } else if (field === "status") {
+        valueA = a.status.toLowerCase();
+        valueB = b.status.toLowerCase();
+      }
+      if (order === "asc") {
+        return valueA.localeCompare(valueB);
+      }
+      return valueB.localeCompare(valueA);
+    });
+  };
+
+  const sortedContacts = sortContacts(contacts, sortField, sortOrder);
+
+  const filteredContacts = sortedContacts?.filter((contact) => {
+    return (
+      contact.name.toLowerCase().includes(searchTerm) ||
+      contact.status.toLowerCase().includes(searchTerm) ||
+      contact.currentInsCo.toLowerCase().includes(searchTerm) ||
+      contact.state.toLowerCase().includes(searchTerm) ||
+      contact.needs.some((need) => need.toLowerCase().includes(searchTerm))
+    );
+  });
+
+  if (status === "loading" || !contacts) {
+    return <p>Loading...</p>;
+  }
+
+  if (error) {
+    return <p>Error loading contacts: {error.message}</p>;
+  }
+
+  if (!session || !session.user.email) {
+    return null;
+  }
+
+  const totalPages = Math.ceil(filteredContacts.length / ITEMS_PER_PAGE);
+  const paginatedContacts = isMobile ? filteredContacts : filteredContacts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <SearchBar searchTerm={searchTerm} onSearch={handleSearch} />
+      <div className="overflow-hidden rounded-lg border border-gray-200 shadow-md w-full">
+        {paginatedContacts.length > 0 ? (
+          <ContactsTable contacts={paginatedContacts} onDelete={deleteContact} onEdit={editContact} onShowNotes={showNotes} handleSort={handleSort} />
+        ) : (
+          <div className="flex items-center justify-center p-4">
+            <div className="flex flex-col items-center">
+              <div className="p-3 mx-auto text-gray-200 bg-blue-100 rounded-full dark:bg-sky-900">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              </div>
+              <h1 className="mt-3 text-lg text-gray-800 dark:text-gray-800">No contacts found</h1>
+              <p className="mt-2 text-gray-500 dark:text-gray-500">Your search did not match any contacts. Please try again or create a new contact.</p>
+            </div>
+          </div>
+        )}
+        {!isMobile && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} totalItems={filteredContacts.length} itemsPerPage={ITEMS_PER_PAGE} />}
+      </div>
+      <Modal show={showNotesModal} onClose={closeNotesModal} customerName={currentCustomerName}>
+        <p>{currentNotes}</p>
+      </Modal>
+    </div>
+  );
+}
+
+----------------------------------------
+
+File: ./src/app/globals.css
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap";
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(to bottom, transparent, rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Custom styles */
+.transition-width {
+  transition-property: width;
+}
+
+----------------------------------------
+
+File: ./src/app/layout.js
+
+"use client";
+
+import { SessionProvider } from "next-auth/react";
+import "./globals.css";
+import { Toaster } from "react-hot-toast";
+import NavBar from "../components/NavBar";
+import SessionChecker from "../components/SessionChecker";
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>
+        <SessionProvider>
+          <SessionChecker>
+            <div className="flex h-screen">
+              <NavBar />
+              <div className="flex-1 overflow-auto">{children}</div>
+            </div>
+          </SessionChecker>
+        </SessionProvider>
+        <Toaster position="top-center" reverseOrder={false} />
+      </body>
+    </html>
+  );
+}
+
+----------------------------------------
+
+File: ./src/app/page.js
+
+"use client";
+
+import { signIn, signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import Image from "next/image";
+
+export default function Home() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/api/auth/signin");
+    }
+  }, [status, router]);
+
+  if (status === "loading") {
+    return <p>Loading...</p>;
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-topColor to-bottomColor">
+      {!session && (
+        <div className="bg-white dark:bg-gray-900">
+          <div className="flex justify-center h-screen w-screen">
+            <div className="hidden bg-cover lg:block lg:w-2/3 bg-center">
+              <div className="flex items-center h-full px-20 bg-gray-900 bg-opacity-40">
+                <div className="flex flex-col items-center">
+                  <Image src="/logo.png" alt="SimpleTrack Logo" width={200} height={200} className="w-full mx-auto" priority />
+                  <p className="max-w-xl mt-3 text-gray-300">Custom CRM to keep track of potential leads and clients.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center w-full max-w-md px-6 mx-auto lg:w-2/6">
+              <div className="flex-1 flex flex-col items-center">
+                <div className="text-center">
+                  <h2 className="text-4xl font-bold text-center text-gray-700 dark:text-white">Access Limited</h2>
+                  <p className="mt-3 text-gray-500 dark:text-gray-300">Sign in to access account.</p>
+                </div>
+                <div className="mt-8 items-center">
+                  <button
+                    onClick={() => signIn("google", { callbackUrl: `${window.location.origin}/auth/signin` })}
+                    className="flex items-center bg-white border border-gray-300 rounded-lg shadow-md max-w-xs px-6 py-2 text-sm font-medium text-gray-800 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  >
+                    <svg className="h-6 w-6 mr-2" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="-0.5 0 48 48" version="1.1">
+                      <g id="Icons" stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">
+                        <g id="Color-" transform="translate(-401.000000, -860.000000)">
+                          <g id="Google" transform="translate(401.000000, 860.000000)">
+                            <path
+                              d="M9.82727273,24 C9.82727273,22.4757333 10.0804318,21.0144 10.5322727,19.6437333 L2.62345455,13.6042667 C1.08206818,16.7338667 0.213636364,20.2602667 0.213636364,24 C0.213636364,27.7365333 1.081,31.2608 2.62025,34.3882667 L10.5247955,28.3370667 C10.0772273,26.9728 9.82727273,25.5168 9.82727273,24"
+                              id="Fill-1"
+                              fill="#FBBC05"
+                            />
+                            <path
+                              d="M23.7136364,10.1333333 C27.025,10.1333333 30.0159091,11.3066667 32.3659091,13.2266667 L39.2022727,6.4 C35.0363636,2.77333333 29.6954545,0.533333333 23.7136364,0.533333333 C14.4268636,0.533333333 6.44540909,5.84426667 2.62345455,13.6042667 L10.5322727,19.6437333 C12.3545909,14.112 17.5491591,10.1333333 23.7136364,10.1333333"
+                              id="Fill-2"
+                              fill="#EB4335"
+                            />
+                            <path
+                              d="M23.7136364,37.8666667 C17.5491591,37.8666667 12.3545909,33.888 10.5322727,28.3562667 L2.62345455,34.3946667 C6.44540909,42.1557333 14.4268636,47.4666667 23.7136364,47.4666667 C29.4455,47.4666667 34.9177955,45.4314667 39.0249545,41.6181333 L31.5177727,35.8144 C29.3995682,37.1488 26.7323182,37.8666667 23.7136364,37.8666667"
+                              id="Fill-3"
+                              fill="#34A853"
+                            />
+                            <path
+                              d="M46.1454545,24 C46.1454545,22.6133333 45.9318182,21.12 45.6113636,19.7333333 L23.7136364,19.7333333 L23.7136364,28.8 L36.3181818,28.8 C35.6879545,31.8912 33.9724545,34.2677333 31.5177727,35.8144 L39.0249545,41.6181333 C43.3393409,37.6138667 46.1454545,31.6490667 46.1454545,24"
+                              id="Fill-4"
+                              fill="#4285F4"
+                            />
+                          </g>
+                        </g>
+                      </g>
+                    </svg>
+                    <span>Continue with Google</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {session && <div className="flex items-center justify-between bg-white p-8 rounded shadow-2xl space-x-8 max-w-lg"></div>}
+    </div>
+  );
+}
+
+----------------------------------------
+
+File: ./src/components/LeadForm.js
+
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import FormInput from "./table/FormInput";
+import { validateForm } from "../utils/validationUtil";
+
+const INITIAL_FORM_DATA = {
+  name: "",
+  occupation: "",
+  email: "",
+  phone: "",
+  status: "initial",
+  statusDate: new Date().toISOString().slice(0, 10),
+  currentInsCo: "",
+  state: "",
+  needs: [],
+  preferredContact: [],
+  notes: "",
+};
+
+const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, title }) => {
+  const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState({});
+  const [insuranceNeeds, setInsuranceNeeds] = useState([]);
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+
+    const fetchInsuranceNeeds = async () => {
+      try {
+        const response = await fetch("/api/insurable-items");
+        const data = await response.json();
+        setInsuranceNeeds(data.map((item) => item.name));
+      } catch (error) {
+        console.error("Error fetching insurance needs:", error);
+      }
+    };
+
+    fetchInsuranceNeeds();
+  }, []);
+
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "status" && { statusDate: new Date().toISOString().slice(0, 10) }),
+    }));
+  }, []);
+
+  const handleCheckChange = useCallback((e, field) => {
+    const { value, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [field]: checked ? [...prev[field], value] : prev[field].filter((item) => item !== value),
+    }));
+  }, []);
+
+  const formatPhoneNumber = (value) => {
+    if (!value) return value;
+    const phoneNumber = value.replace(/[^\d]/g, "");
+    const phoneNumberLength = phoneNumber.length;
+
+    if (phoneNumberLength < 4) return phoneNumber;
+    if (phoneNumberLength < 7) {
+      return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
+    }
+    return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+  };
+
+  const handlePhoneChange = useCallback((e) => {
+    const formattedPhoneNumber = formatPhoneNumber(e.target.value);
+    setFormData((prev) => ({ ...prev, phone: formattedPhoneNumber }));
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const validationErrors = validateForm(formData);
+    if (Object.keys(validationErrors).length === 0) {
+      const success = await onSubmit(formData);
+      if (success) {
+        router.push("/auth/signin");
+      }
+    } else {
+      setErrors(validationErrors);
+    }
+  };
+
+  const handleCancel = () => {
+    router.push("/auth/signin");
+  };
+
+  if (!mounted) return null;
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <div className="w-full max-w-3xl bg-white p-8 rounded-lg shadow-lg">
+        <h2 className="text-3xl font-bold mb-6 text-center text-gray-700">{title}</h2>
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormInput label="Name" name="name" value={formData.name} onChange={handleChange} error={errors.name} />
+            <FormInput label="Occupation" name="occupation" value={formData.occupation} onChange={handleChange} error={errors.occupation} />
+            <FormInput label="Email" type="email" name="email" value={formData.email} onChange={handleChange} error={errors.email} />
+            <FormInput label="Phone" type="tel" name="phone" value={formData.phone} onChange={handlePhoneChange} error={errors.phone} />
+            <div>
+              <label className="block text-gray-700">Status</label>
+              <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-2 border rounded-md text-gray-900 focus:ring focus:ring-blue-200">
+                <option value="initial">Initial</option>
+                <option value="pending">Pending</option>
+                <option value="followedUp">Followed Up</option>
+                <option value="quoted">Quoted</option>
+                <option value="client">Client</option>
+                <option value="notInterested">Not Interested</option>
+              </select>
+            </div>
+            <FormInput label="Status Date" type="date" name="statusDate" value={formData.statusDate} onChange={handleChange} error={errors.statusDate} />
+            <FormInput label="Current Insurance Company" name="currentInsCo" value={formData.currentInsCo} onChange={handleChange} error={errors.currentInsCo} />
+            <FormInput label="State" name="state" value={formData.state} onChange={handleChange} error={errors.state} />
+          </div>
+          <div>
+            <label className="block text-gray-700">Insurance Needs</label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+              {insuranceNeeds.map((need) => (
+                <label key={need} className="flex items-center text-gray-900">
+                  <input type="checkbox" value={need} checked={formData.needs.includes(need)} onChange={(e) => handleCheckChange(e, "needs")} className="mr-2 focus:ring focus:ring-blue-200" />
+                  {need}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-gray-700">Preferred Contact Method</label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {["Phone", "Email", "Text"].map((method) => (
+                <label key={method} className="flex items-center text-gray-900">
+                  <input
+                    type="checkbox"
+                    value={method}
+                    checked={formData.preferredContact.includes(method)}
+                    onChange={(e) => handleCheckChange(e, "preferredContact")}
+                    className="mr-2 focus:ring focus:ring-blue-200"
+                  />
+                  {method}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-gray-700">Notes</label>
+            <textarea name="notes" value={formData.notes} onChange={handleChange} className="w-full px-4 py-2 border rounded-md text-gray-900 focus:ring focus:ring-blue-200" rows="4" />
+          </div>
+          <button type="submit" className="w-full bg-gray-700 text-white px-4 py-2 rounded-md shadow hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200">
+            {buttonText}
+          </button>
+          <button type="button" onClick={handleCancel} className="w-full mt-4 bg-gray-700 text-white px-4 py-2 rounded-md shadow hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-200">
+            Cancel
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default LeadForm;
+
+----------------------------------------
+
+File: ./src/components/Modal.js
+
+import React from "react";
+import PropTypes from "prop-types";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+
+const Modal = ({ show, onClose, children, customerName }) => {
+  if (!show) return null;
+
+  const modalClasses = "bg-white rounded-lg p-6 w-1/3 shadow-lg border border-gray-200";
+  const overlayClasses = "fixed inset-0 flex items-center justify-center bg-black bg-opacity-50";
+  const closeButtonClasses = "text-gray-700 hover:text-red-700";
+
+  return (
+    <div className={overlayClasses}>
+      <div className={modalClasses}>
+        <div className="flex justify-between mb-4">
+          <span className="text-gray-500">{customerName}</span>
+          <button onClick={onClose} className={closeButtonClasses}>
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+        </div>
+        <div className="text-gray-900 whitespace-pre-wrap">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+Modal.propTypes = {
+  show: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  children: PropTypes.node.isRequired,
+  customerName: PropTypes.string,
+};
+
+Modal.defaultProps = {
+  customerName: "",
+};
+
+export default Modal;
+
+----------------------------------------
+
+File: ./src/components/NavBar.js
+
+"use client";
+
+import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { UserPlusIcon, HomeModernIcon, HomeIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
+import UserProfile from "../components/UserProfile";
+
+const NavBar = () => {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "authenticated" && !session?.user?.email) {
+      router.push("/auth/signin");
+    }
+  }, [status, session, router]);
+
+  const handleSignOut = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    signOut({ callbackUrl: window.location.origin });
+  };
+
+  if (!session || !session.user.email) {
+    return null;
+  }
+
+  return (
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 pattern p-2.5">
+      <nav className="z-20 flex flex-col justify-around gap-4 border-t border-gray-200 bg-white/50 p-2.5 shadow-lg backdrop-blur-lg dark:border-slate-600/60 dark:bg-slate-800/50 min-h-[auto] rounded-lg border">
+        <UserProfile user={session.user} isAdmin={session.user.isAdmin} />
+        <NavLink href="/auth/signin" icon={<HomeIcon className="w-6 h-6 shrink-0" />} label="Home" />
+        <NavLink href="/auth/addlead" icon={<UserPlusIcon className="w-6 h-6 shrink-0" />} label="Add Lead" />
+        {session.user.isAdmin && (
+          <>
+            <hr className="dark:border-gray-700/60" />
+            <NavLink href="/auth/admin" icon={<ShieldCheckIcon className="w-6 h-6 shrink-0" />} label="Admin" />
+          </>
+        )}
+        <hr className="dark:border-gray-700/60" />
+        <button onClick={handleSignOut} className="flex h-16 w-16 flex-col items-center justify-center gap-1 text-fuchsia-900 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-600">
+          <HomeModernIcon className="w-6 h-6" />
+          <small className="text-xs font-medium">Sign Out</small>
+        </button>
+      </nav>
+    </div>
+  );
+};
+
+const NavLink = ({ href, icon, label }) => (
+  <Link
+    href={href}
+    className="flex aspect-square min-h-[32px] w-16 flex-col items-center justify-center gap-1 rounded-md p-1.5 text-gray-700 hover:bg-gray-600 dark:text-gray-400 dark:hover:bg-slate-600"
+  >
+    {icon}
+    <small className="text-center text-xs font-medium">{label}</small>
+  </Link>
+);
+
+export default NavBar;
+
+----------------------------------------
+
+File: ./src/components/SessionChecker.js
+
+"use client";
+
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+const SessionChecker = ({ children }) => {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "authenticated" && router.pathname === "/auth/signin") {
+      router.push("/");
+    }
+  }, [status, router]);
+
+  if (status === "loading") {
+    return <p>Loading...</p>;
+  }
+
+  return children;
+};
+
+export default SessionChecker;
+
+----------------------------------------
+
+File: ./src/components/UserProfile.js
+
+import Image from "next/image";
+import { ShieldCheckIcon } from "@heroicons/react/24/outline";
+
+const UserProfile = ({ user, isAdmin }) => (
+  <div className="relative flex aspect-square min-h-[32px] w-16 flex-col items-center justify-center gap-1 rounded-md p-1.5 bg-indigo-50 text-indigo-600 dark:bg-sky-900 dark:text-sky-50">
+    {isAdmin && <ShieldCheckIcon className="absolute top-0 left-0 w-4 h-4 text-yellow-500" />}
+    <Image src={user.image} alt={user.name} width={24} height={24} className="w-6 h-6 mx-auto rounded-full mb-2" />
+    <small className="text-center text-xs font-medium">{user.name.split(" ")[0]}</small>
+  </div>
+);
+
+export default UserProfile;
+
+----------------------------------------
+
+File: ./src/components/table/ContactActions.js
+
+import { useState } from "react";
+import { PencilIcon, TrashIcon, ChatBubbleBottomCenterTextIcon, HandThumbUpIcon, HandThumbDownIcon } from "@heroicons/react/24/outline";
+import { toast } from "react-hot-toast";
+
+const ConfirmDeleteButtons = ({ onConfirm, onCancel }) => (
+  <div className="flex gap-2">
+    <button onClick={onConfirm} className="text-green-600 hover:text-green-800">
+      <HandThumbUpIcon className="h-6 w-6" />
+    </button>
+    <button onClick={onCancel} className="text-red-600 hover:text-red-800">
+      <HandThumbDownIcon className="h-6 w-6" />
+    </button>
+  </div>
+);
+
+const ContactActions = ({ contact, onDelete, onEdit, onShowNotes }) => {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleDeleteClick = () => setConfirmDelete(true);
+
+  const handleConfirmDelete = () => {
+    onDelete(contact._id);
+    setConfirmDelete(false);
+    toast.success("Contact deleted successfully!", {
+      duration: 3000,
+      position: "top-center",
+    });
+  };
+
+  const handleCancelDelete = () => setConfirmDelete(false);
+
+  return (
+    <td className="px-6 py-4">
+      <div className="flex justify-end gap-4">
+        {confirmDelete ? (
+          <ConfirmDeleteButtons onConfirm={handleConfirmDelete} onCancel={handleCancelDelete} />
+        ) : (
+          <button onClick={handleDeleteClick}>
+            <TrashIcon className="h-6 w-6 text-gray-600 hover:text-red-600" />
+          </button>
+        )}
+        <button onClick={() => onEdit(contact._id)}>
+          <PencilIcon className="h-6 w-6 text-gray-600 hover:text-blue-600" />
+        </button>
+        <button onClick={() => onShowNotes(contact._id)} disabled={!contact.notes || contact.notes.length === 0}>
+          <ChatBubbleBottomCenterTextIcon className={`h-6 w-6 ${contact.notes && contact.notes.length > 0 ? "text-gray-600 hover:text-green-600" : "text-gray-300"}`} />
+        </button>
+      </div>
+    </td>
+  );
+};
+
+export default ContactActions;
+
+----------------------------------------
+
+File: ./src/components/table/ContactRow.js
+
+import React from "react";
+import ContactStatus from "./ContactStatus";
+import PreferredContactMethod from "./PreferredContactMethod";
+import StateAbbreviation from "./StateAbbreviation";
+import InsuranceNeeds from "./InsuranceNeeds";
+import ContactActions from "./ContactActions";
+
+const tableRowClasses = "table-row hover:bg-gray-50";
+const tableCellClasses = "table-cell px-2 py-2 lg:px-6 lg:py-4";
+
+const ContactRow = ({ contact, onDelete, onEdit, onShowNotes }) => {
+  return (
+    <div className={tableRowClasses}>
+      <div className={tableCellClasses}>
+        <div className="text-sm">
+          <div className="font-medium text-gray-700">{contact.name}</div>
+          <div className="text-gray-400">{contact.occupation}</div>
+        </div>
+      </div>
+      <PreferredContactMethod methods={contact.preferredContact} phone={contact.phone} email={contact.email} />
+      <ContactStatus level={contact.status} statusDate={contact.statusDate} />
+      <div className={tableCellClasses}>{contact.currentInsCo}</div>
+      <StateAbbreviation state={contact.state} />
+      <InsuranceNeeds needs={contact.needs} />
+      <ContactActions contact={contact} onDelete={onDelete} onEdit={onEdit} onShowNotes={onShowNotes} />
+    </div>
+  );
+};
+
+export default ContactRow;
+
+----------------------------------------
+
+File: ./src/components/table/ContactStatus.js
+
+import React from "react";
+import PropTypes from "prop-types";
+import { getContactLevel } from "../../utils/contactLevels";
+
+const ContactStatus = ({ level, statusDate }) => {
+  const { bgColor, textColor, dotColor, label } = getContactLevel(level);
+
+  return (
+    <td className="px-6 py-4">
+      <div className={`inline-flex items-center gap-1 rounded-full ${bgColor} px-2 py-1 text-xs font-semibold ${textColor}`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`}></span>
+        {label}
+      </div>
+      <div className="text-xs text-gray-500">As of: {statusDate}</div>
+    </td>
+  );
+};
+
+ContactStatus.propTypes = {
+  level: PropTypes.oneOf(["pending", "initial", "followedUp", "notInterested", "quoted", "client"]).isRequired,
+  statusDate: PropTypes.string.isRequired,
+};
+
+export default ContactStatus;
+
+----------------------------------------
+
+File: ./src/components/table/ContactsTable.js
+
+import React, { useState, useEffect, useRef } from "react";
+import { useMediaQuery } from "react-responsive";
+import DesktopContactsTable from "./DesktopContactsTable";
+import MobileContactsTable from "./MobileContactsTable";
+import { getContactLevel, contactLevels } from "../../utils/contactLevels";
+
+const ContactsTable = ({ contacts = [], onDelete, onEdit, onShowNotes, handleSort }) => {
+  const [sortedContacts, setSortedContacts] = useState([]);
+  const [selectedStatuses, setSelectedStatuses] = useState(Object.keys(contactLevels));
+  const [selectedInsuranceTypes, setSelectedInsuranceTypes] = useState([]);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showInsuranceDropdown, setShowInsuranceDropdown] = useState(false);
+  const [insurableItems, setInsurableItems] = useState([]);
+  const isMobile = useMediaQuery({ maxWidth: 767 });
+  const statusDropdownRef = useRef(null);
+  const insuranceDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const filteredContacts = contacts.filter(
+      (contact) => selectedStatuses.includes(contact.status) && (selectedInsuranceTypes.length === 0 || contact.needs.some((need) => selectedInsuranceTypes.includes(need)))
+    );
+    setSortedContacts(filteredContacts);
+  }, [contacts, selectedStatuses, selectedInsuranceTypes]);
+
+  useEffect(() => {
+    const fetchInsurableItems = async () => {
+      try {
+        const response = await fetch("/api/insurable-items");
+        const data = await response.json();
+        setInsurableItems(data);
+      } catch (error) {
+        console.error("Error fetching insurable items:", error);
+      }
+    };
+
+    fetchInsurableItems();
+  }, []);
+
+  const toggleStatus = (status) => {
+    setSelectedStatuses((prevSelected) => (prevSelected.includes(status) ? prevSelected.filter((s) => s !== status) : [...prevSelected, status]));
+  };
+
+  const toggleInsuranceType = (type) => {
+    setSelectedInsuranceTypes((prevSelected) => (prevSelected.includes(type) ? prevSelected.filter((t) => t !== type) : [...prevSelected, type]));
+  };
+
+  const handleClickOutside = (event) => {
+    if ((statusDropdownRef.current && !statusDropdownRef.current.contains(event.target)) || (insuranceDropdownRef.current && !insuranceDropdownRef.current.contains(event.target))) {
+      setShowStatusDropdown(false);
+      setShowInsuranceDropdown(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  if (isMobile) {
+    return <MobileContactsTable contacts={sortedContacts} getContactLevel={getContactLevel} onDelete={onDelete} onEdit={onEdit} onShowNotes={onShowNotes} />;
+  }
+
+  return (
+    <DesktopContactsTable
+      contacts={sortedContacts}
+      selectedStatuses={selectedStatuses}
+      selectedInsuranceTypes={selectedInsuranceTypes}
+      toggleStatus={toggleStatus}
+      toggleInsuranceType={toggleInsuranceType}
+      showStatusDropdown={showStatusDropdown}
+      setShowStatusDropdown={setShowStatusDropdown}
+      statusDropdownRef={statusDropdownRef}
+      showInsuranceDropdown={showInsuranceDropdown}
+      setShowInsuranceDropdown={setShowInsuranceDropdown}
+      insuranceDropdownRef={insuranceDropdownRef}
+      onDelete={onDelete}
+      onEdit={onEdit}
+      onShowNotes={onShowNotes}
+      insurableItems={insurableItems}
+      handleSort={handleSort}
+    />
+  );
+};
+
+export default ContactsTable;
+
+----------------------------------------
+
+File: ./src/components/table/DesktopContactsTable.js
+
+import React from "react";
+import { ArrowsUpDownIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import ContactRow from "./ContactRow";
+import { getContactLevel, contactLevels } from "../../utils/contactLevels";
+import { ICON_MAP } from "../../utils/insurableItems";
+
+const DesktopContactsTable = ({
+  contacts,
+  selectedStatuses,
+  selectedInsuranceTypes,
+  toggleStatus,
+  toggleInsuranceType,
+  showStatusDropdown,
+  setShowStatusDropdown,
+  statusDropdownRef,
+  showInsuranceDropdown,
+  setShowInsuranceDropdown,
+  insuranceDropdownRef,
+  onDelete,
+  onEdit,
+  onShowNotes,
+  insurableItems,
+  handleSort,
+}) => {
+  const tableWrapperClasses = "overflow-auto";
+  const tableContainerClasses = "min-w-full inline-block align-middle";
+  const tableClasses = "w-full border-collapse bg-white text-left text-sm text-gray-500";
+  const tableHeaderGroupClasses = "bg-gray-50";
+  const tableHeaderCellClasses = "px-2 py-2 lg:px-6 lg:py-4 font-medium text-gray-900";
+  const tableHeaderCellSortableClasses = `${tableHeaderCellClasses} flex items-center relative`;
+  const sortIconClasses = "h-4 w-4 ml-1";
+  const tableRowGroupClasses = "divide-y divide-gray-100 border-t border-gray-100";
+  // const tableRowClasses = "table-row hover:bg-gray-50";
+  // const tableCellClasses = "table-cell px-2 py-2 lg:px-6 lg:py-4";
+  // const actionsCellClasses = "px-2 py-2 lg:px-6 lg:py-4 flex space-x-4";
+
+  return (
+    <div className={tableWrapperClasses}>
+      <div className={tableContainerClasses}>
+        <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+          <table className={tableClasses}>
+            <thead className={tableHeaderGroupClasses}>
+              <tr>
+                <th scope="col" className={tableHeaderCellSortableClasses} onClick={() => handleSort("name")}>
+                  Name
+                  <ArrowsUpDownIcon className={sortIconClasses} />
+                </th>
+                <th scope="col" className={tableHeaderCellClasses}>
+                  Contact
+                </th>
+                <th scope="col" className={tableHeaderCellSortableClasses}>
+                  <div>Status</div>
+                  <ChevronDownIcon className={sortIconClasses} onClick={() => setShowStatusDropdown(!showStatusDropdown)} />
+                  {showStatusDropdown && (
+                    <div ref={statusDropdownRef} className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                      <ul className="max-h-48 overflow-auto p-2">
+                        {Object.keys(contactLevels).map((level) => (
+                          <li key={level} className="flex items-center mb-2">
+                            <input type="checkbox" className="mr-2" checked={selectedStatuses.includes(level)} onChange={() => toggleStatus(level)} />
+                            <span className={getContactLevel(level).textColor}>{getContactLevel(level).label}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </th>
+                <th scope="col" className={tableHeaderCellClasses}>
+                  Current Insurance
+                </th>
+                <th scope="col" className={tableHeaderCellClasses}>
+                  State
+                </th>
+                <th scope="col" className={tableHeaderCellSortableClasses}>
+                  <div>Insurance Needs</div>
+                  <ChevronDownIcon className={sortIconClasses} onClick={() => setShowInsuranceDropdown(!showInsuranceDropdown)} />
+                  {showInsuranceDropdown && (
+                    <div ref={insuranceDropdownRef} className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                      <ul className="max-h-48 overflow-auto p-2">
+                        {insurableItems.map((item) => (
+                          <li key={item.name} className="flex items-center mb-2">
+                            <input type="checkbox" className="mr-2" checked={selectedInsuranceTypes.includes(item.name)} onChange={() => toggleInsuranceType(item.name)} />
+                            <span className={ICON_MAP[item.icon]?.textColor}>{item.name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </th>
+                <th scope="col" className={tableHeaderCellClasses}></th>
+              </tr>
+            </thead>
+            <tbody className={tableRowGroupClasses}>
+              {contacts.map((contact, index) => (
+                <ContactRow key={index} contact={contact} onDelete={onDelete} onEdit={onEdit} onShowNotes={onShowNotes} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DesktopContactsTable;
+
+----------------------------------------
+
+File: ./src/components/table/FormInput.js
+
+import React from "react";
+
+const FormInput = ({ label, type = "text", name, value, onChange, error, ...rest }) => (
+  <div>
+    <label className="block text-gray-700">{label}</label>
+    <input
+      type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
+      className={`w-full px-4 py-2 border rounded-md text-gray-900 focus:ring focus:ring-blue-200 ${error ? "border-red-500" : "border-gray-300"}`}
+      {...rest}
+    />
+    {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+  </div>
+);
+
+export default FormInput;
+
+----------------------------------------
+
+File: ./src/components/table/InsuranceNeeds.js
+
+import React, { useEffect, useState } from "react";
+import PropTypes from "prop-types";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { ICON_MAP } from "../../utils/insurableItems";
+
+const InsuranceNeeds = ({ needs }) => {
+  const [insurableItems, setInsurableItems] = useState([]);
+
+  useEffect(() => {
+    const fetchInsurableItems = async () => {
+      try {
+        const response = await fetch("/api/insurable-items");
+        const data = await response.json();
+        setInsurableItems(data);
+      } catch (error) {
+        console.error("Error fetching insurable items:", error);
+      }
+    };
+
+    fetchInsurableItems();
+  }, []);
+
+  const getNeedLevel = (need) => {
+    const item = insurableItems.find((item) => item.name === need);
+    return item ? { ...item, icon: ICON_MAP[item.icon] } : { bgColor: "bg-gray-50", textColor: "text-gray-600", icon: null };
+  };
+
+  const firstRow = needs.slice(0, 3);
+  const secondRow = needs.slice(3);
+
+  return (
+    <td className="px-6 py-4">
+      <div className="flex flex-wrap gap-1">
+        {firstRow.map((need, idx) => {
+          const { bgColor, textColor, icon } = getNeedLevel(need);
+          return (
+            <span key={idx} className={`inline-flex items-center gap-1 rounded-full ${bgColor} px-2 py-1 text-xs font-semibold ${textColor}`}>
+              <FontAwesomeIcon icon={icon} className="mr-1" />
+              {need}
+            </span>
+          );
+        })}
+        {secondRow.length > 0 && (
+          <>
+            <span className="w-full h-px"></span>
+            {secondRow.map((need, idx) => {
+              const { bgColor, textColor, icon } = getNeedLevel(need);
+              return (
+                <span key={idx} className={`inline-flex items-center gap-1 rounded-full ${bgColor} px-2 py-1 text-xs font-semibold ${textColor}`}>
+                  <FontAwesomeIcon icon={icon} className="mr-1" />
+                  {need}
+                </span>
+              );
+            })}
+          </>
+        )}
+      </div>
+    </td>
+  );
+};
+
+InsuranceNeeds.propTypes = {
+  needs: PropTypes.arrayOf(PropTypes.string).isRequired,
+};
+
+export default InsuranceNeeds;
+
+----------------------------------------
+
+File: ./src/components/table/MobileContactsTable.js
+
+import React from "react";
+import { EnvelopeIcon, PhoneIcon } from "@heroicons/react/24/outline";
+
+const MobileContactsTable = ({ contacts, getContactLevel, onDelete, onEdit, onShowNotes }) => {
+  const groupedContacts = contacts.reduce((acc, contact) => {
+    const level = contact.status;
+    if (!acc[level]) {
+      acc[level] = [];
+    }
+    acc[level].push(contact);
+    return acc;
+  }, {});
+
+  const contactLevelsOrder = ["pending", "initial", "followedUp", "quoted", "client", "notInterested"];
+
+  const getBackgroundClass = (textColorClass) => {
+    const color = textColorClass.split("-")[1];
+    return `bg-${color}-50`;
+  };
+
+  return (
+    <div className="w-full">
+      {contactLevelsOrder.map((level) => (
+        <div key={level}>
+          {groupedContacts[level] && groupedContacts[level].length > 0 && (
+            <>
+              <h2 className={`text-lg font-semibold my-4 text-center ${getContactLevel(level).textColor} ${getBackgroundClass(getContactLevel(level).textColor)}`}>{getContactLevel(level).label}</h2>
+              {groupedContacts[level].map((contact) => (
+                <div key={contact._id} className="bg-white p-4 mb-4 rounded-lg shadow-md">
+                  <div className="flex items-center mb-2">
+                    <div className="mr-2">
+                      <span className="text-gray-900 font-semibold text-lg">{contact.name}</span>
+                    </div>
+                  </div>
+                  <div className="text-gray-700 mb-1">{contact.occupation}</div>
+                  <div className="text-gray-500 mb-1">
+                    <a href={`mailto:${contact.email}`} className="flex items-center">
+                      <EnvelopeIcon className="w-4 h-4 mr-1" />
+                      {contact.email}
+                    </a>
+                  </div>
+                  <div className="text-gray-500">
+                    <a href={`tel:${contact.phone}`} className="flex items-center">
+                      <PhoneIcon className="w-4 h-4 mr-1" />
+                      {contact.phone}
+                    </a>
+                  </div>
+                  <div className="flex space-x-4 mt-2">
+                    <button onClick={() => onEdit(contact._id)} className="text-blue-600 hover:text-blue-800">
+                      Edit
+                    </button>
+                    <button onClick={() => onDelete(contact._id)} className="text-red-600 hover:text-red-800">
+                      Delete
+                    </button>
+                    <button onClick={() => onShowNotes(contact._id)} className="text-gray-600 hover:text-gray-800">
+                      Notes
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default MobileContactsTable;
+
+----------------------------------------
+
+File: ./src/components/table/Pagination.js
+
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+
+const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }) => {
+  const buttonClasses = "w-9 h-9 flex items-center justify-center rounded-md border border-[#EDEFF1] text-[#838995] text-base hover:bg-primary hover:border-primary hover:text-blue";
+
+  const PaginationButton = ({ onClick, children, isActive }) => (
+    <button onClick={onClick} className={`${buttonClasses} ${isActive ? "text-gray-900 font-bold" : ""}`}>
+      {children}
+    </button>
+  );
+
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+  return (
+    <div className="flex flex-col items-center justify-center">
+      <div className="inline-flex border border-[#e4e4e4] bg-white p-4 rounded-xl mt-4">
+        <ul className="flex items-center justify-center w-full">
+          <li className="px-[6px]">
+            <PaginationButton onClick={() => onPageChange(Math.max(1, currentPage - 1))}>
+              <ChevronLeftIcon className="h-5 w-5" />
+            </PaginationButton>
+          </li>
+          {Array.from({ length: totalPages }, (_, index) => (
+            <li className="px-[6px]" key={index}>
+              <PaginationButton onClick={() => onPageChange(index + 1)} isActive={currentPage === index + 1}>
+                {index + 1}
+              </PaginationButton>
+            </li>
+          ))}
+          <li className="px-[6px]">
+            <PaginationButton onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}>
+              <ChevronRightIcon className="h-5 w-5" />
+            </PaginationButton>
+          </li>
+        </ul>
+      </div>
+      <div className="mt-2 px-4 py-1 bg-white rounded-md text-gray-500 text-sm font-medium">
+        {startItem} - {endItem} of {totalItems}
+      </div>
+    </div>
+  );
+};
+
+export default Pagination;
+
+----------------------------------------
+
+File: ./src/components/table/PreferredContactMethod.js
+
+import { PhoneIcon, EnvelopeIcon, ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
+
+const PreferredContactMethod = ({ methods, phone, email }) => {
+  const iconClass = "h-5 w-5 text-gray-500";
+
+  const ContactIcon = ({ type }) => {
+    const icons = {
+      Phone: <PhoneIcon className={iconClass} />,
+      Email: <EnvelopeIcon className={iconClass} />,
+      Text: <ChatBubbleLeftRightIcon className={iconClass} />,
+    };
+
+    return icons[type] || null;
+  };
+
+  return (
+    <td className="px-6 py-4">
+      <div className="text-gray-400">{phone}</div>
+      <div className="text-gray-400">{email}</div>
+      <div className="flex gap-1">
+        {methods.map((method) => (
+          <ContactIcon key={method} type={method} />
+        ))}
+      </div>
+    </td>
+  );
+};
+
+export default PreferredContactMethod;
+
+----------------------------------------
+
+File: ./src/components/table/SearchBar.js
+
+import { useState } from "react";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+
+const SearchBar = ({ searchTerm, onSearch }) => {
+  const [term, setTerm] = useState(searchTerm);
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setTerm(value);
+    onSearch(value);
+  };
+
+  const containerClass = "w-full max-w-3xl p-4 bg-gray-50 rounded-lg shadow mb-4";
+  const inputClass = "w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:border-sky-500 focus:ring-sky-500 focus:outline-none";
+
+  return (
+    <div className={containerClass}>
+      <div className="relative">
+        <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+        <input type="text" placeholder="Search..." value={term} onChange={handleSearchChange} className={inputClass} />
+      </div>
+    </div>
+  );
+};
+
+export default SearchBar;
+
+----------------------------------------
+
+File: ./src/components/table/StateAbbreviation.js
+
+const stateNames = {
+  AL: "Alabama",
+  AK: "Alaska",
+  AZ: "Arizona",
+  AR: "Arkansas",
+  CA: "California",
+  CO: "Colorado",
+  CT: "Connecticut",
+  DE: "Delaware",
+  FL: "Florida",
+  GA: "Georgia",
+  HI: "Hawaii",
+  ID: "Idaho",
+  IL: "Illinois",
+  IN: "Indiana",
+  IA: "Iowa",
+  KS: "Kansas",
+  KY: "Kentucky",
+  LA: "Louisiana",
+  ME: "Maine",
+  MD: "Maryland",
+  MA: "Massachusetts",
+  MI: "Michigan",
+  MN: "Minnesota",
+  MS: "Mississippi",
+  MO: "Missouri",
+  MT: "Montana",
+  NE: "Nebraska",
+  NV: "Nevada",
+  NH: "New Hampshire",
+  NJ: "New Jersey",
+  NM: "New Mexico",
+  NY: "New York",
+  NC: "North Carolina",
+  ND: "North Dakota",
+  OH: "Ohio",
+  OK: "Oklahoma",
+  OR: "Oregon",
+  PA: "Pennsylvania",
+  RI: "Rhode Island",
+  SC: "South Carolina",
+  SD: "South Dakota",
+  TN: "Tennessee",
+  TX: "Texas",
+  UT: "Utah",
+  VT: "Vermont",
+  VA: "Virginia",
+  WA: "Washington",
+  WV: "West Virginia",
+  WI: "Wisconsin",
+  WY: "Wyoming",
+  DC: "District of Columbia",
+  AS: "American Samoa",
+  GU: "Guam",
+  MP: "Northern Mariana Islands",
+  PR: "Puerto Rico",
+  VI: "United States Virgin Islands",
+  Alabama: "AL",
+  Alaska: "AK",
+  Arizona: "AZ",
+  Arkansas: "AR",
+  California: "CA",
+  Colorado: "CO",
+  Connecticut: "CT",
+  Delaware: "DE",
+  Florida: "FL",
+  Georgia: "GA",
+  Hawaii: "HI",
+  Idaho: "ID",
+  Illinois: "IL",
+  Indiana: "IN",
+  Iowa: "IA",
+  Kansas: "KS",
+  Kentucky: "KY",
+  Louisiana: "LA",
+  Maine: "ME",
+  Maryland: "MD",
+  Massachusetts: "MA",
+  Michigan: "MI",
+  Minnesota: "MN",
+  Mississippi: "MS",
+  Missouri: "MO",
+  Montana: "MT",
+  Nebraska: "NE",
+  Nevada: "NV",
+  "New Hampshire": "NH",
+  "New Jersey": "NJ",
+  "New Mexico": "NM",
+  "New York": "NY",
+  "North Carolina": "NC",
+  "North Dakota": "ND",
+  Ohio: "OH",
+  Oklahoma: "OK",
+  Oregon: "OR",
+  Pennsylvania: "PA",
+  "Rhode Island": "RI",
+  "South Carolina": "SC",
+  "South Dakota": "SD",
+  Tennessee: "TN",
+  Texas: "TX",
+  Utah: "UT",
+  Vermont: "VT",
+  Virginia: "VA",
+  Washington: "WA",
+  "West Virginia": "WV",
+  Wisconsin: "WI",
+  Wyoming: "WY",
+  "District of Columbia": "DC",
+  "American Samoa": "AS",
+  Guam: "GU",
+  "Northern Mariana Islands": "MP",
+  "Puerto Rico": "PR",
+  "United States Virgin Islands": "VI",
+};
+
+const StateAbbreviation = ({ state }) => {
+  const abbreviation = state.length === 2 ? state : stateNames[state];
+  const fullName = state.length === 2 ? stateNames[state] : state;
+
+  const containerClass = "relative group";
+  const tooltipClass = "absolute bottom-0 left-0 hidden w-32 p-2 mt-1 text-sm text-white bg-gray-800 rounded-md shadow-lg group-hover:block";
+  const cellClass = "px-6 py-4";
+
+  return (
+    <td className={cellClass}>
+      <div className={containerClass}>
+        <span>{abbreviation}</span>
+        <div className={tooltipClass}>{fullName}</div>
+      </div>
+    </td>
+  );
+};
+
+export default StateAbbreviation;
+
+----------------------------------------
+
+File: ./src/hooks/useContacts.js
+
+import useSWR from "swr";
+import { useSession } from "next-auth/react";
+
+const fetcher = async (url) => {
+  const res = await fetch(url, {
+    headers: {
+      "Cache-Control": "no-cache",
+    },
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message);
+  }
+  return res.json();
+};
+
+export const useContacts = () => {
+  const { data: session } = useSession();
+  const { data, error, mutate } = useSWR(session ? `/api/contacts?userId=${session.user.id}` : null, fetcher);
+
+  return {
+    contacts: data,
+    error,
+    revalidate: mutate,
+  };
+};
+
+----------------------------------------
+
+File: ./src/utils/authHelpers.js
+
+import { connectToDatabase } from "./mongodb";
+
+export async function handleSignIn(user) {
+  try {
+    const { db } = await connectToDatabase();
+    const usersCollection = db.collection("users");
+
+    const existingUser = await usersCollection.findOne({ email: user.email });
+
+    if (!existingUser) {
+      await usersCollection.insertOne({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        image: user.image,
+        createdAt: new Date(),
+        lastLoggedIn: new Date(),
+        isAdmin: user.id === process.env.ADMIN_ID,
+      });
+    } else {
+      await usersCollection.updateOne(
+        { email: user.email },
+        {
+          $set: {
+            lastLoggedIn: new Date(),
+            isAdmin: user.id === process.env.ADMIN_ID,
+          },
+        }
+      );
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error during sign in:", error);
+    return false;
+  }
+}
+
+export async function getUserByEmail(email) {
+  try {
+    const { db } = await connectToDatabase();
+    const usersCollection = db.collection("users");
+    return await usersCollection.findOne({ email });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return null;
+  }
+}
+
+----------------------------------------
+
+File: ./src/utils/contactLevels.js
+
+export const contactLevels = {
+  pending: {
+    bgColor: "bg-gray-50",
+    textColor: "text-gray-600",
+    dotColor: "bg-gray-600",
+    label: "Pending Lead",
+  },
+  initial: {
+    bgColor: "bg-purple-50",
+    textColor: "text-purple-600",
+    dotColor: "bg-purple-600",
+    label: "Initial Contact",
+  },
+  followedUp: {
+    bgColor: "bg-yellow-50",
+    textColor: "text-yellow-600",
+    dotColor: "bg-yellow-600",
+    label: "Followed Up",
+  },
+  notInterested: {
+    bgColor: "bg-red-50",
+    textColor: "text-red-600",
+    dotColor: "bg-red-600",
+    label: "Not Interested",
+  },
+  quoted: {
+    bgColor: "bg-blue-50",
+    textColor: "text-blue-600",
+    dotColor: "bg-blue-600",
+    label: "Quoted",
+  },
+  client: {
+    bgColor: "bg-green-50",
+    textColor: "text-green-600",
+    dotColor: "bg-green-600",
+    label: "Client",
+  },
+};
+
+export const getContactLevel = (level) => contactLevels[level] || contactLevels.pending;
+
+----------------------------------------
+
+File: ./src/utils/fontawesome.js
+
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { faCar, faHome, faShip, faHeart, faBuilding, faDog, faUmbrella, faStore, faHouseDamage, faWater, faMotorcycle, faCaravan, faAt, faHouseUser } from "@fortawesome/free-solid-svg-icons";
+
+library.add(faCar, faHome, faShip, faHeart, faBuilding, faDog, faUmbrella, faStore, faHouseDamage, faWater, faMotorcycle, faCaravan, faAt, faHouseUser);
+
+----------------------------------------
+
+File: ./src/utils/insurableItems.js
+
+import { faCar, faHome, faShip, faHeart, faBuilding, faDog, faUmbrella, faStore, faHouseDamage, faWater, faMotorcycle, faCaravan, faAt, faHouseUser } from "@fortawesome/free-solid-svg-icons";
+
+export const ICON_MAP = {
+  faCar: faCar,
+  faHome: faHome,
+  faShip: faShip,
+  faHeart: faHeart,
+  faBuilding: faBuilding,
+  faDog: faDog,
+  faUmbrella: faUmbrella,
+  faStore: faStore,
+  faHouseDamage: faHouseDamage,
+  faWater: faWater,
+  faMotorcycle: faMotorcycle,
+  faCaravan: faCaravan,
+  faAt: faAt,
+  faHouseUser: faHouseUser,
+};
+
+export const defaultLevel = {
+  bgColor: "bg-gray-50",
+  textColor: "text-gray-600",
+  icon: null,
+};
+
+export const getNeedLevel = (need, items) => {
+  const item = items.find((item) => item.name === need);
+  return item ? { ...item, icon: ICON_MAP[item.icon] } : { bgColor: "bg-gray-50", textColor: "text-gray-600", icon: null };
+};
+
+----------------------------------------
+
+File: ./src/utils/mongodb.js
+
+const { MongoClient } = require("mongodb");
+
+const uri = process.env.MONGODB_URI;
+const dbName = process.env.MONGODB_DB;
+let cachedClient = null;
+let cachedDb = null;
+
+async function connectToDatabase() {
+  if (cachedClient && cachedDb) {
+    return { client: cachedClient, db: cachedDb };
+  }
+
+  const client = new MongoClient(uri);
+
+  await client.connect();
+  const db = client.db(dbName);
+
+  cachedClient = client;
+  cachedDb = db;
+
+  return { client, db };
+}
+
+module.exports = { connectToDatabase };
+
+----------------------------------------
+
+File: ./src/utils/validationUtil.js
+
+export const validateForm = (formData) => {
+  const errors = {};
+  if (formData.name && !/^[a-zA-Z\s]+$/.test(formData.name)) errors.name = "Name can only contain letters.";
+  if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) errors.email = "Email is invalid.";
+  if (formData.phone && !/^\d{3}-\d{3}-\d{4}$/.test(formData.phone)) errors.phone = "Phone number is invalid.";
+  if (formData.statusDate && new Date(formData.statusDate) > new Date()) errors.statusDate = "Status date cannot be in the future.";
+  return errors;
+};
+
+----------------------------------------
+
+File: ./src/utils/withAdminAuth.js
+
+"use client";
+
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+const withAdminAuth = (WrappedComponent) => {
+  const Component = (props) => {
+    const { data: session, status } = useSession();
+    const router = useRouter();
+
+    useEffect(() => {
+      if (status === "authenticated" && !session?.user?.isAdmin) {
+        router.push("/auth/signin");
+      }
+    }, [status, session, router]);
+
+    if (status === "loading") {
+      return <p>Loading...</p>;
+    }
+
+    if (!session?.user?.isAdmin) {
+      return null;
+    }
+
+    return <WrappedComponent {...props} />;
+  };
+
+  Component.displayName = `withAdminAuth(${WrappedComponent.displayName || WrappedComponent.name || "Component"})`;
+
+  return Component;
+};
+
+export default withAdminAuth;
+
+----------------------------------------
+
+File: ./tailwind.config.js
+
+module.exports = {
+  content: ["./src/pages/**/*.{js,ts,jsx,tsx,mdx}", "./src/components/**/*.{js,ts,jsx,tsx,mdx}", "./src/app/**/*.{js,ts,jsx,tsx,mdx}", "./src/utils/**/*.{js,ts,jsx,tsx,mdx}"],
+  theme: {
+    extend: {
+      colors: {
+        topColor: "#F9F9F9",
+        bottomColor: "#EFEFEF",
+      },
+      backgroundImage: {
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        "gradient-conic": "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
+        "gradient-to-b": "linear-gradient(to bottom, var(--tw-gradient-stops))",
+      },
+    },
+  },
+  plugins: [require("@tailwindcss/forms"), require("@material-tailwind/react")],
+  safelist: [
+    {
+      pattern: /bg-(blue|green|yellow|red|purple|teal|pink|indigo|cyan|lime|amber|gray|orange|stone|slate|neutral|zinc)-50/,
+    },
+    {
+      pattern: /text-(blue|green|yellow|red|purple|teal|pink|indigo|cyan|lime|amber|gray|orange|stone|slate|neutral|zinc)-600/,
+    },
+  ],
+};
+
+----------------------------------------
+

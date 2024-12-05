@@ -30,9 +30,9 @@ const DesktopContactsTable = ({
   const tableHeaderCellSortableClasses = `${tableHeaderCellClasses} flex items-center relative`;
   const sortIconClasses = "h-4 w-4 ml-1";
   const tableRowGroupClasses = "divide-y divide-gray-100 border-t border-gray-100";
-  const tableRowClasses = "table-row hover:bg-gray-50";
-  const tableCellClasses = "table-cell px-2 py-2 lg:px-6 lg:py-4";
-  const actionsCellClasses = "px-2 py-2 lg:px-6 lg:py-4 flex space-x-4";
+  // const tableRowClasses = "table-row hover:bg-gray-50";
+  // const tableCellClasses = "table-cell px-2 py-2 lg:px-6 lg:py-4";
+  // const actionsCellClasses = "px-2 py-2 lg:px-6 lg:py-4 flex space-x-4";
 
   return (
     <div className={tableWrapperClasses}>
