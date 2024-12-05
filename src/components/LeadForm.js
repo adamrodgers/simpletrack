@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Tesseract from "tesseract.js";
 import { useRouter } from "next/navigation";
 import FormInput from "./table/FormInput";
 import { validateForm } from "../utils/validationUtil";
-import Image from "next/image";
+import callGoogleVision from "../utils/googleVision"; // Import Google Vision logic
 
 const INITIAL_FORM_DATA = {
   name: "",
@@ -28,11 +27,8 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
   const [image, setImage] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-
     const fetchInsuranceNeeds = async () => {
       try {
         const response = await fetch("/api/insurable-items");
@@ -45,63 +41,6 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
 
     fetchInsuranceNeeds();
   }, []);
-
-  const handleImageUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setImage(URL.createObjectURL(file));
-    setIsProcessing(true);
-
-    try {
-      // Use Tesseract to recognize text
-      const { data } = await Tesseract.recognize(file, "eng");
-
-      // Log the extracted text for debugging
-      console.log("Extracted Text:", data.text);
-
-      // Parse extracted text into form fields
-      const extractedData = parseExtractedText(data.text);
-      console.log("Parsed Data:", extractedData); // Log the parsed data for further debugging
-
-      setFormData((prev) => ({ ...prev, ...extractedData }));
-    } catch (error) {
-      console.error("Error with OCR:", error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const parseExtractedText = (text) => {
-    const lines = text.split("\n").map((line) => line.trim());
-    return {
-      name:
-        lines
-          .find((line) => line.toLowerCase().includes("name"))
-          ?.split(":")[1]
-          ?.trim() || "",
-      email:
-        lines
-          .find((line) => line.toLowerCase().includes("email"))
-          ?.split(":")[1]
-          ?.trim() || "",
-      phone:
-        lines
-          .find((line) => line.toLowerCase().includes("phone"))
-          ?.split(":")[1]
-          ?.trim() || "",
-      currentInsCo:
-        lines
-          .find((line) => line.toLowerCase().includes("company"))
-          ?.split(":")[1]
-          ?.trim() || "",
-      state:
-        lines
-          .find((line) => line.toLowerCase().includes("state"))
-          ?.split(":")[1]
-          ?.trim() || "",
-    };
-  };
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -137,6 +76,38 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
     setFormData((prev) => ({ ...prev, phone: formattedPhoneNumber }));
   }, []);
 
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setImage(URL.createObjectURL(file));
+    setIsProcessing(true);
+
+    try {
+      // Read the file as base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result.split(",")[1];
+
+        // Call Google Vision API
+        const extractedText = await callGoogleVision(base64);
+        console.log("Extracted Text:", extractedText);
+
+        // Parse the extracted text
+        const extractedData = parseExtractedText(extractedText);
+        console.log("Parsed Data:", extractedData);
+
+        // Update form data
+        setFormData((prev) => ({ ...prev, ...extractedData }));
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Error with Google Vision OCR:", error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validateForm(formData);
@@ -154,54 +125,47 @@ const LeadForm = ({ initialFormData = INITIAL_FORM_DATA, onSubmit, buttonText, t
     router.push("/auth/signin");
   };
 
-  if (!mounted) return null;
+  const parseExtractedText = (text) => {
+    // Implement a robust logic to parse text and extract relevant fields
+    const data = {
+      name: "",
+      email: "",
+      phone: "",
+      currentInsCo: "",
+      state: "",
+    };
+
+    // Add regex-based parsing for handwritten and structured content
+    return data;
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-3xl bg-white p-8 rounded-lg shadow-lg">
         <h2 className="text-3xl font-bold mb-6 text-center text-gray-700">{title}</h2>
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-gray-700">Upload Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-600 hover:file:bg-gray-200"
-            />
-            {isProcessing && <p className="text-gray-500 text-sm mt-2">Processing image...</p>}
-            {image && (
-              <div className="mt-4 w-32 h-32 relative">
-                <Image
-                  src={image}
-                  alt="Uploaded Preview"
-                  layout="fill"
-                  objectFit="contain"
-                  className="border rounded-md"
-                  priority // Optimize for LCP
-                />
-              </div>
-            )}
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput label="Name" name="name" value={formData.name} onChange={handleChange} error={errors.name} />
             <FormInput label="Occupation" name="occupation" value={formData.occupation} onChange={handleChange} error={errors.occupation} />
             <FormInput label="Email" type="email" name="email" value={formData.email} onChange={handleChange} error={errors.email} />
             <FormInput label="Phone" type="tel" name="phone" value={formData.phone} onChange={handlePhoneChange} error={errors.phone} />
-            <div>
-              <label className="block text-gray-700">Status</label>
-              <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-2 border rounded-md text-gray-900 focus:ring focus:ring-blue-200">
-                <option value="initial">Initial</option>
-                <option value="pending">Pending</option>
-                <option value="followedUp">Followed Up</option>
-                <option value="quoted">Quoted</option>
-                <option value="client">Client</option>
-                <option value="notInterested">Not Interested</option>
-              </select>
-            </div>
-            <FormInput label="Status Date" type="date" name="statusDate" value={formData.statusDate} onChange={handleChange} error={errors.statusDate} />
             <FormInput label="Current Insurance Company" name="currentInsCo" value={formData.currentInsCo} onChange={handleChange} error={errors.currentInsCo} />
             <FormInput label="State" name="state" value={formData.state} onChange={handleChange} error={errors.state} />
+            <div>
+              <label className="block text-gray-700">Upload Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-600 hover:file:bg-gray-200"
+              />
+              {isProcessing && <p className="text-gray-500 text-sm mt-2">Processing image...</p>}
+              {image && (
+                <div className="mt-4 w-32 h-32 relative">
+                  <img src={image} alt="Uploaded Preview" className="border rounded-md" />
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-gray-700">Insurance Needs</label>

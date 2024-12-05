@@ -19,8 +19,8 @@
 # misc
 .DS_Store
 *.pem
-printall.*
-print.txt
+print*.*
+google-vision-key.json
 
 # debug
 npm-debug.log*
